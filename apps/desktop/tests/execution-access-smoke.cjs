@@ -61,6 +61,7 @@ let app;
   await page.evaluate(() => window.btk.personal.test());
   assert.equal(await app.evaluate(() => global.accessCalls.at(-1).full), false);
   await page.getByRole('button', { name: '새 대화', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.execution-access select')?.value === 'chat');
   assert.equal(await access.inputValue(), 'chat');
   await access.selectOption('full');
   for (const width of [1440, 390]) {

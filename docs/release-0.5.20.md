@@ -41,6 +41,9 @@ identity. Do not disable Windows security controls.
 - Source-change secret scanning found no leaks. No live provider inference was
   performed. npm audit reports zero high/critical and 10 moderate findings;
   the remaining dependency-chain risk is described below.
+- The first CI run found a timing race in the new-conversation smoke assertion.
+  The test now waits for the React permission reset before checking its value;
+  the runtime permission boundary and default are unchanged.
 
 ## Scope and Limits
 
