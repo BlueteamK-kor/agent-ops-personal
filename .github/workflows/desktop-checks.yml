@@ -36,6 +36,12 @@ jobs:
         working-directory: apps/desktop
         env:
           DEBUG: pw:browser
+      - run: npm run test:message-markdown
+        working-directory: apps/desktop
+      - run: npm run test:file-task
+        working-directory: apps/desktop
+      - run: npm run test:execution-access
+        working-directory: apps/desktop
       - run: npm audit --audit-level=high
         working-directory: apps/desktop
       - name: Build isolated Windows package
@@ -71,6 +77,12 @@ jobs:
           node tests/transmission-ui-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/workspace-tools-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/message-markdown-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/file-task-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/execution-access-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/workspace-archive-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

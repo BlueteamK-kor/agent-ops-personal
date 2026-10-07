@@ -46,7 +46,7 @@ For example, one worker can analyze a proposal while another critiques its assum
 
 ## Install
 
-Download `AEGIS-Agent-Ops-Setup-0.5.19.exe` from the [release page](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest).
+Download `AEGIS-Agent-Ops-Setup-0.5.20.exe` from the [release page](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest).
 
 Starting with 0.5.15, Personal checks for updates automatically. Use **App updates**
 in the sidebar to download, then confirm restart/install. Older versions require
@@ -99,7 +99,7 @@ Example objective:
 
 > Review the proposal below. Ask one worker to summarize the benefits and another to identify unsupported assumptions. Combine their findings into a short decision brief, distinguishing supplied facts from suggestions. Do not invent missing evidence.
 
-The app does not browse for evidence, read arbitrary files, or execute generated commands. Supply the text yourself and verify the result.
+Default chat does not browse for evidence, read arbitrary files, or execute generated commands. Supply the text yourself and verify the result. In 0.5.20, ChatGPT/Codex chat separately offers [Full access](docs/personal-execution-access.md) with native approval for every request; it includes files outside the working folder and network access. [File task](docs/personal-task-runtime.md) offers a separate single-file proposal and approved-save workflow.
 
 ## Model Connections
 
@@ -178,7 +178,7 @@ The public client is not the operational harness or a standalone distribution of
 
 ## Current Limits
 
-- Text-only assistance: no general file access, shell execution, or autonomous tool execution.
+- Chat only is the default. Optional Codex Full access allows file/command/network operations after per-request approval, without administrator elevation. Other providers and team workers do not inherit it.
 - Memory is manual and keyword-based; no automatic learning, embeddings, or cloud synchronization.
 - The Slack sample does not post messages or assign work through Slack.
 - Real Google OAuth sign-in/inference and fresh-PC installation need validation beyond automated fixtures.
@@ -242,7 +242,7 @@ See [contributing](CONTRIBUTING.md) and [Windows CI](https://github.com/aegisint
 | [Public history](docs/public-history.md) | Why this repository contains selected product history |
 | [Security policy](SECURITY.md) | Private vulnerability reporting |
 
-Near-term validation priorities are fresh-PC installation and real provider/account flows, particularly Google sign-in. App conversation persistence is implemented; broader connectors and tool execution remain possible future work, **not promised release dates**. Permission and data-flow boundaries must be designed before enabling external writes.
+Near-term validation priorities are fresh-PC installation and real provider/account flows, particularly Google sign-in. App conversation persistence, approved single-file saves and per-request Codex Full access are implemented. Broader connectors and provider-independent or team tool execution remain possible future work, **not promised release dates**. New external writes require explicit permission and data-flow boundaries.
 
 Older implementation notes in `docs/` describe individual development stages. This README describes the current release; historical test counts and pending items are not a current support matrix.
 

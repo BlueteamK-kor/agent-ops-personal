@@ -26,6 +26,8 @@ function validateImage(value, limit) {
 }
 const { WorkspaceStore } = require('./workspace-store.cjs');
 const { WorkspaceImporter } = require('./workspace-import.cjs');
+const { FileTask } = require('./file-task.cjs');
+const fileTask = new FileTask();
 
 // This utility has no WebGL/video surfaces. Avoid retaining a hardware compositor
 // allocation for a mostly static control window; background work lives outside Electron.
@@ -107,9 +109,40 @@ else {
       if (!options?.probe && Array.isArray(messages)) messages = enrich(messages, knowledge.snapshot(agents.data.selected), messages.at(-1)?.content);
       if (personal.data.connection !== "codex") return personal.complete(messages, options);
       personal.idle(); personal.codexActive = true;
-      try { return await codex.complete(messages, personal.data.codexModel, personal.data.codexReasoningEffort || ''); }
+      try { return await codex.complete(messages, personal.data.codexModel, personal.data.codexReasoningEffort || '', options?.execution); }
       finally { personal.codexActive = false; }
     };
+    for (const method of ['generate', 'apply', 'cancel']) ipcMain.handle(`btk:file-task:${method}`, async (event, params) => {
+      if (!trustedFrame(event, window, entry) || personalFailure || personal.data.mode !== 'personal') throw new Error('Untrusted request');
+      if (params?.agentId !== agents.data.selected) throw new Error('file_task_expired');
+      if (method === 'cancel') {
+        if (!fileTask.active) return { cancelled: false };
+        fileTask.cancelled = true;
+        return personal.data.connection === 'codex' ? codex.cancel() : personal.cancel();
+      }
+      personal.idle();
+      if (personalDialogActive || team.active || setupActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new Error('file_task_busy');
+      personalDialogActive = true;
+      try {
+        const agent = agents.state();
+        const bound = { agentId: agent.agentId, root: personal.data.workspace };
+        if (method === 'generate') return await fileTask.generate({ ...bound, relative: params.path, objective: params.objective }, {
+          complete,
+          confirm: async info => (await dialog.showMessageBox(window, { type: 'question', title: t('파일 작업'),
+            message: t('선택한 파일 내용과 요청을 모델에 보낼까요?'),
+            detail: `${agent.endpoint}\n${agent.model}\n${bound.root}\n${info.relative}\n${info.characters} characters`,
+            buttons: [t('취소'), t('계속')], defaultId: 0, cancelId: 0 })).response === 1,
+        });
+        return await fileTask.apply({ ...bound, id: params.id }, async proposal => (await dialog.showMessageBox(window, {
+          type: 'warning', title: t('파일 저장 승인'), message: t('검토한 수정안을 파일에 저장할까요?'),
+          detail: `${bound.root}\n${proposal.path}\n${t('기존 파일이 있으면 교체됩니다. 명령은 실행하지 않습니다.')}`,
+          buttons: [t('취소'), t('저장')], defaultId: 0, cancelId: 0,
+        })).response === 1);
+      } catch (error) {
+        if (/^file_task_[a-z_]+$/.test(error.message) || error instanceof PersonalError || error.code === 'transmission_blocked') throw error;
+        throw new Error('file_task_failed');
+      } finally { personalDialogActive = false; }
+    });
     team = new TeamCoordinator({ open: (id, { objective }) => {
       const service = agents.open(id);
       const state = service.state();
@@ -317,7 +350,19 @@ else {
               if (answer.response !== 1) throw new PersonalError('요청을 취소했습니다.');
             } finally { personalDialogActive = false; }
           }
-          const result = await complete(messages, generating ? { imageModel } : undefined);
+          let execution;
+          personal.idle(); personalDialogActive = true;
+          try {
+            if (generating && params?.access && params.access !== 'chat') throw new PersonalError('지원하지 않는 실행 권한입니다.');
+            execution = await require('./execution-access.cjs').authorizeExecution(params?.access, agent, async info => {
+              const answer = await dialog.showMessageBox(window, { type: 'warning', title: t('전체 접근 승인'),
+                message: t('이 요청에 전체 접근을 허용할까요?'),
+                detail: `${info.agentName}\n${info.model}\n${info.cwd}\n\n${t('작업 폴더 밖을 포함하여 현재 사용자 권한으로 파일 읽기·수정·삭제, 명령 실행 및 네트워크 전송이 가능합니다. 파일과 도구 결과가 모델 공급자에게 전송될 수 있으며 자동 민감 정보 검사를 보장하지 않습니다. 관리자 권한을 부여하지 않습니다. 이 요청에만 적용되며, 중단해도 이미 수행한 변경은 되돌리지 않습니다.')}`,
+                buttons: [t('취소'), t('이번 요청 허용')], defaultId: 0, cancelId: 0 });
+              return answer.response === 1;
+            });
+          } finally { personalDialogActive = false; }
+          const result = await complete(messages, generating ? { imageModel } : { execution });
           for (const image of result.images || []) validateImage(image, OUTPUT_LIMIT);
           return { ...result, agentId: agent.agentId, agentName: agent.agentName, model: generating ? imageModel : agent.model };
         } catch (error) {

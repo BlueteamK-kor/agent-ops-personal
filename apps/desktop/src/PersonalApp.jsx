@@ -10,6 +10,8 @@ import CodexSettings from "./CodexSettings";
 import GoogleSettings from './GoogleSettings';
 import UpdateControl from './UpdateControl';
 import TeamPanel from './TeamPanel';
+import MessageContent from './MessageContent';
+import FileTaskPanel from './FileTaskPanel';
 import KnowledgePanel from './KnowledgePanel';
 import providers from "../electron/providers.json";
 import { initialSessions, agentSessionsReducer, conversationInput, MAX_SESSIONS } from "./sessions.mjs";
@@ -138,6 +140,7 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
   const [view, setView] = useState(initial.model ? "chat" : "settings");
   const [busy, setBusy] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
+  const [access, setAccess] = useState('chat');
   const [teamRun, setTeamRun] = useState(null);
   const [teamDraft, setTeamDraft] = useState('');
   useEffect(() => {
@@ -176,6 +179,7 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
     return () => { current = false; };
   }, [agentId]);
   const selected = sessions.items.find(item => item.id === sessions.selected);
+  useEffect(() => setAccess('chat'), [agentId, sessions.selected, state.connection, state.model, state.workspace, selected.output]);
   const locked = busy || chatBusy || modeBusy || sourceReading || storageStatus === 'loading' || teamRun?.status === 'running';
   function navigate(next) { setError(""); setView(next); if (window.innerWidth <= 900) setNavOpen(false); }
   async function run(action) {
@@ -225,7 +229,7 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
     dispatch({ type: "draft", id, value: "" });
     setChatBusy(true); setError("");
     try {
-      const result = generating ? await native().generateImage(messages, agentId, imageModel) : await native().chat(messages, agentId);
+      const result = generating ? await native().generateImage(messages, agentId, imageModel) : await native().chat(messages, agentId, access);
       dispatch({ type: "run", id, value: { ...latestRun, status: result.status, usage: result.usage, agentId: result.agentId, model: result.model } });
       dispatch({ type: "messages", id, value: rows => [...rows.map(row => row.id === messageId ? { ...row, state: 'completed' } : row), { id: crypto.randomUUID(), role: "assistant", content: result.text, ...(result.images ? { images: result.images } : {}), model: result.model || state.model, state: result.status, usage: result.usage, output: selected.output || 'chat' }] });
     } catch (e) {
@@ -245,6 +249,7 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
         <button className={view === "chat" ? "active" : ""} disabled={busy} onClick={() => navigate("chat")}><MessageSquare size={18} />{t("작업 공간")}</button>
         <button className={view === "settings" ? "active" : ""} disabled={locked} onClick={() => navigate("settings")}><Settings2 size={18} />{t("모델 연결")}</button>
         <button className={view === "connectors" ? "active" : ""} disabled={locked} onClick={() => navigate("connectors")}><Plug size={18} />{t("커넥터")}</button>
+        <button className={view === 'files' ? 'active' : ''} disabled={locked} onClick={() => navigate('files')}><Pencil size={18} />{t('파일 작업')}</button>
         <button disabled={locked} onClick={() => run(async () => { const result = await native().folder(); if (result.workspace !== state.workspace) saved(result); })}><FolderOpen size={18} />{t("작업 폴더")}</button>
       </nav>
       <section className="session-list" aria-label={t("개인 대화 세션")}><h2>{t("세션")} <span>{sessions.items.length}</span></h2>
@@ -256,24 +261,32 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
       <div className="sidebar-bottom"><UpdateControl /><button className="outline-button" disabled={locked} onClick={switchMode}><Shield size={16} />{t("조직 연결")}</button></div>
     </aside>
     <main className="main-shell">
-      <header className="topbar"><div className="breadcrumb"><ButtonIcon label={t("탐색 표시")} aria-expanded={navOpen} onClick={() => setNavOpen(value => !value)}><PanelLeft size={17} /></ButtonIcon><span>Personal</span><strong>{view === 'team' ? t('팀 작업') : view === "settings" ? t("모델 연결") : view === "connectors" ? t("커넥터") : t("작업 공간")}</strong></div><div className="topbar-actions"><LanguageSelect /><span className="personal-local">{t("중앙 연결 없음")}</span>{view === "chat" && <ButtonIcon label={w("open")} aria-pressed={showSummary} onClick={() => setShowSummary(value => !value)}><PanelRight size={17} /></ButtonIcon>}</div></header>
+      <header className="topbar"><div className="breadcrumb"><ButtonIcon label={t("탐색 표시")} aria-expanded={navOpen} onClick={() => setNavOpen(value => !value)}><PanelLeft size={17} /></ButtonIcon><span>Personal</span><strong>{view === 'files' ? t('파일 작업') : view === 'team' ? t('팀 작업') : view === "settings" ? t("모델 연결") : view === "connectors" ? t("커넥터") : t("작업 공간")}</strong></div><div className="topbar-actions"><LanguageSelect /><span className="personal-local">{t("중앙 연결 없음")}</span>{view === "chat" && <ButtonIcon label={w("open")} aria-pressed={showSummary} onClick={() => setShowSummary(value => !value)}><PanelRight size={17} /></ButtonIcon>}</div></header>
       {(error || modeError) && <div className="personal-error" role="alert"><CircleAlert size={17} /><span>{errorText(error || modeError)}</span></div>}
       {['restoreError', 'saveError'].includes(storageStatus) && <div className="personal-error" role="alert">{w(storageStatus)}</div>}
       {view !== 'team' && <div className="personal-agent-bar"><label>{t("에이전트")}<select aria-label={t("에이전트")} disabled={locked} value={agentId} onChange={event => { const id = event.target.value; run(async () => agentChanged(await native().agents.select(id))); }}>{(state.agents || [{ id: "default", name: t("기본 에이전트") }]).map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select></label><ButtonIcon label={t("에이전트 추가")} disabled={locked || (state.agents?.length || 1) >= 20} onClick={() => run(async () => agentChanged(await native().agents.create(t("새 에이전트"))))}><Plus size={18} /></ButtonIcon><span>{state.model || t("모델 미설정")}</span></div>}
       {view === 'team' ? <TeamPanel state={state} run={teamRun} busy={locked} draft={teamDraft} onDraftChange={setTeamDraft} onStart={params => run(async () => { const value = await native().team.start(params); setTeamRun(value); return value; })} onCancel={() => run(async () => setTeamRun(await native().team.cancel()))} onClear={() => run(async () => setTeamRun(await native().team.clear()))} onSelect={id => teamAgent(() => native().agents.select(id))} onCreate={name => teamAgent(() => native().agents.create(name))} renderEditor={editorBusy => <AgentEditor state={state} busy={editorBusy} run={run} onSaved={saved} onRenamed={setState} />} /> :
-      view === "settings" ? <div key="settings" className="personal-settings-scroll"><AgentEditor state={state} busy={locked} run={run} onSaved={saved} onRenamed={setState} /></div> : view === "connectors" ? <div key="connectors" className="personal-settings-scroll"><SlackPanel key={agentId} state={slack} onState={setSlack} busy={locked} run={run} /></div> :
+      view === "settings" ? <div key="settings" className="personal-settings-scroll"><AgentEditor state={state} busy={locked} run={run} onSaved={saved} onRenamed={setState} /></div> : view === "files" ? <FileTaskPanel key={`${agentId}:${state.workspace}`} state={state} busy={locked} run={run} /> : view === "connectors" ? <div key="connectors" className="personal-settings-scroll"><SlackPanel key={agentId} state={slack} onState={setSlack} busy={locked} run={run} /></div> :
         <div key="chat" className={`personal-workspace ${showSummary ? "with-summary" : ""}`}>
         <section className="personal-chat">
           <div className="personal-context"><FolderOpen size={15} /><span title={state.workspace}>{state.workspace || t("작업 폴더 미선택")}</span><small>{w('folderAccess')}</small><small className="workspace-storage-state" role="status">{w(storageStatus)}</small></div>
           <div className="personal-transcript" role="log" aria-label={t("개인 대화")}>
             {!selected.messages.length && <div className="personal-empty"><Workflow size={32} className="workspace-logo" /><h1>AEGIS Agent Ops</h1><span>{state.model || t("모델 미연결")}</span></div>}
-            {selected.messages.map(row => <article className={`personal-message ${row.role}`} key={row.id}><strong>{row.role === "user" ? t("나") : row.model || t("에이전트")}</strong><p>{row.content}</p><MessageImages row={row} />{row.state === 'failed' && <div className="personal-message-actions"><span>{t('요청 실패 · 후속 전송에서 제외됨')}</span><ButtonIcon label={t('실패한 메시지 수정')} disabled={locked || Boolean(selected.draft)} onClick={() => { dispatch({ type: 'recover', id: selected.id, messageId: row.id, mode: 'edit' }); setError(''); }}><Pencil size={15} /></ButtonIcon><ButtonIcon label={t('실패한 메시지 삭제')} disabled={locked} onClick={() => { dispatch({ type: 'recover', id: selected.id, messageId: row.id, mode: 'remove' }); setError(''); }}><Trash2 size={15} /></ButtonIcon></div>}{row.state === "partial" && <small>{t("응답 불완전")}</small>}{row.usage && <small>{t("토큰")} {row.usage.total_tokens ?? t("미제공")}</small>}</article>)}
+            {selected.messages.map(row => <article className={`personal-message ${row.role}`} key={row.id}><strong>{row.role === "user" ? t("나") : row.model || t("에이전트")}</strong>{row.role === 'assistant' ? <MessageContent content={row.content} /> : <p>{row.content}</p>}<MessageImages row={row} />{row.state === 'failed' && <div className="personal-message-actions"><span>{t('요청 실패 · 후속 전송에서 제외됨')}</span><ButtonIcon label={t('실패한 메시지 수정')} disabled={locked || Boolean(selected.draft)} onClick={() => { dispatch({ type: 'recover', id: selected.id, messageId: row.id, mode: 'edit' }); setError(''); }}><Pencil size={15} /></ButtonIcon><ButtonIcon label={t('실패한 메시지 삭제')} disabled={locked} onClick={() => { dispatch({ type: 'recover', id: selected.id, messageId: row.id, mode: 'remove' }); setError(''); }}><Trash2 size={15} /></ButtonIcon></div>}{row.state === "partial" && <small>{t("응답 불완전")}</small>}{row.usage && <small>{t("토큰")} {row.usage.total_tokens ?? t("미제공")}</small>}</article>)}
             {chatBusy && <div className="personal-pending" role="status"><LoaderCircle size={16} className="spin" />{t("응답 대기 중")}</div>}
           </div>
           <form className="composer" onSubmit={send}><WorkspaceInputs key={selected.id} state={state} session={selected} disabled={locked} onReading={setSourceReading} onChange={value => dispatch({ type: 'workspace', id: selected.id, value })} /><textarea aria-label={t("개인 메시지")} maxLength={16000} disabled={locked} value={selected.draft} onChange={e => dispatch({ type: "draft", id: selected.id, value: e.target.value })} />
             <div className="composer-bottom"><span>{(selected.output === 'image' ? selected.imageModel ?? defaultImageModel(state) : state.model) || t("모델 미연결")}</span>{chatBusy ? <ButtonIcon label={t("개인 답변 중단")} onClick={() => native().cancel().catch(e => setError(e.message))}><Square size={16} /></ButtonIcon> : <button className="send" aria-label={t("개인 메시지 전송")} title={t("전송")} disabled={locked || !state.model || !selected.draft.trim() || (selected.output === 'image' && (!imageGenerationAvailable(state) || !(selected.imageModel ?? defaultImageModel(state)).trim())) || (['google', 'gemini-cli'].includes(state.connection) ? !state.accountConfigured : !state.keyConfigured && !["local", "codex"].includes(state.provider))}><ArrowUp size={18} /></button>}</div>
+            <div className="execution-access" data-access={access}>
+              <label title={t(state.connection === 'codex' ? '실행 권한' : '전체 접근은 ChatGPT / Codex 연결에서만 지원됩니다.')}><Shield size={15} aria-hidden="true" />
+                <select aria-label={t('실행 권한')} value={access} disabled={locked || state.connection !== 'codex' || selected.output === 'image'} onChange={event => setAccess(event.target.value)}>
+                  <option value="chat">{t('대화 전용')}</option><option value="full">{t('전체 접근')}</option>
+                </select>
+              </label>
+              {access === 'full' && <span>{t('현재 사용자 권한 · 요청별 승인')}</span>}
+            </div>
           </form>
-          <div className="personal-destination"><span title={state.endpoint}>{state.endpoint || t("API 주소 미설정")}</span><span>{t("도구 실행 비활성")}</span></div>
+          <div className="personal-destination"><span title={state.endpoint}>{state.endpoint || t("API 주소 미설정")}</span><span>{t(access === 'full' ? '전체 접근 · 요청별 승인' : '도구 실행 비활성')}</span></div>
         </section>
         {showSummary && <><button className="personal-summary-scrim" aria-label={t("실행 요약 닫기")} onClick={() => setShowSummary(false)} /><WorkspacePanel key={selected.id} state={state} session={selected} slack={slack} disabled={locked} onRevise={value => { dispatch({ type: 'draft', id: selected.id, value }); if (window.innerWidth <= 1100) setShowSummary(false); }} onClose={() => setShowSummary(false)} onConnectors={() => { if (!locked) navigate("connectors"); }} /></>}
         </div>}

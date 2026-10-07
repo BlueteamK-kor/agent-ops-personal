@@ -13,11 +13,11 @@ const server = http.createServer(async (req, res) => {
   let body = ''; for await (const part of req) body += part;
   const data = JSON.parse(body); requests.push(data);
   const prompt = data.messages[0].content;
-  let text = 'Worker evidence';
+  let text = '**Worker evidence**\n\n- Verified detail';
   if (prompt.startsWith('Plan')) {
     const payload = JSON.parse(prompt.slice(prompt.indexOf('\n') + 1));
     text = JSON.stringify({ tasks: payload.workers.map(w => ({ agentId: w.agentId, task: `Review ${w.name}` })) });
-  } else if (prompt.startsWith('Synthesize')) text = 'Verified fixture synthesis';
+  } else if (prompt.startsWith('Synthesize')) text = '## Verified fixture synthesis\n\n1. **Reviewed evidence**';
   await new Promise(resolve => setTimeout(resolve, 200));
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ choices: [{ message: { content: text }, finish_reason: 'stop' }] }));
@@ -55,6 +55,10 @@ const server = http.createServer(async (req, res) => {
   assert.equal(await page.evaluate(async () => { try { await window.btk.personal.mode('enterprise'); return false; } catch { return true; } }), true);
   assert.equal(await page.evaluate(async () => { try { await window.btk.personal.team.configure({ masterId: 'default', workerIds: [] }); return false; } catch { return true; } }), true);
   await page.getByText('Verified fixture synthesis', { exact: true }).waitFor();
+  assert.equal(await page.locator('.team-transcript .message-markdown h2').innerText(), 'Verified fixture synthesis');
+  assert.equal(await page.locator('.team-transcript .message-markdown ol strong').innerText(), 'Reviewed evidence');
+  await page.locator('.team-worker details summary').first().click();
+  assert.equal(await page.locator('.team-worker .message-markdown strong').first().innerText(), 'Worker evidence');
   assert.deepEqual(requests.map(r => r.model), ['master-model', 'research-model', 'review-model', 'master-model']);
   assert.equal((await page.evaluate(() => window.btk.personal.team.state())).status, 'completed');
   await page.getByRole('button', { name: '하위 에이전트 추가', exact: true }).click();

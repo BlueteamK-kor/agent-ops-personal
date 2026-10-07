@@ -18,6 +18,11 @@ contextBridge.exposeInMainWorld("btk", {
     save: language => ipcRenderer.invoke('btk:preferences:save', { language }),
   },
   personal: {
+    fileTask: {
+      generate: (agentId, path, objective) => ipcRenderer.invoke('btk:file-task:generate', { agentId, path, objective }),
+      apply: (agentId, id) => ipcRenderer.invoke('btk:file-task:apply', { agentId, id }),
+      cancel: agentId => ipcRenderer.invoke('btk:file-task:cancel', { agentId }),
+    },
     workspace: {
       read: () => ipcRenderer.invoke('btk:workspace:read'),
       save: groups => ipcRenderer.invoke('btk:workspace:save', groups),
@@ -95,7 +100,7 @@ contextBridge.exposeInMainWorld("btk", {
     generateImage: (messages, agentId, imageModel) => ipcRenderer.invoke('btk:personal:generateImage', { messages, agentId, imageModel }),
     copyDocument: content => ipcRenderer.invoke('btk:personal:copy', { content }),
     test: () => ipcRenderer.invoke("btk:personal:test"),
-    chat: (messages, agentId) => ipcRenderer.invoke("btk:personal:chat", { messages, agentId }),
+    chat: (messages, agentId, access = 'chat') => ipcRenderer.invoke("btk:personal:chat", { messages, agentId, access }),
     cancel: () => ipcRenderer.invoke("btk:personal:cancel"),
   },
   snapshot: () => ipcRenderer.invoke("btk:snapshot"),

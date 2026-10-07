@@ -48,6 +48,11 @@ remain enabled.
 - Markdown preview supports headings, lists, tables and code, with a source-view
   toggle. Raw HTML is skipped; links do not navigate and external images are not
   loaded. Rendering uses react-markdown and remark-gfm, loaded on demand.
+- Personal assistant messages, team synthesis and worker results use the same
+  safe Markdown renderer. Nested lists, inline code, fenced code, blockquotes
+  and tables receive shared typography; long code and tables scroll within
+  their own bounds. User messages remain literal text. Stored content and
+  model prompts are unchanged. Included in 0.5.20.
 - Copy uses an explicit native clipboard action. Revision prepares a follow-up
   draft from the selected output and never automatically sends a model request.
 - Saving invokes a native Save As dialog. Only the selected TXT/MD destination is
@@ -69,6 +74,11 @@ remain enabled.
 
 ## Deferred
 
+A separate local [File task implementation](personal-task-runtime.md) adds
+approved single-file text/code writes in 0.5.20. This does not enable tools in
+team mode or default chat. Separately, [Full access](personal-execution-access.md)
+enables Codex tools only after explicit approval for each chat request.
+
 Image-to-image editing, dedicated OCR, native Word editing/export, XLSX/PPTX processing,
 HTML publishing and new governance workflows are not implemented by this change.
 TXT/MD and generated raster images can be exported. PDF/Word import extracts text, not page layout or
@@ -81,6 +91,8 @@ and upgrade instructions are recorded in [0.5.19](release-0.5.19.md).
 - `npm test`
 - `npm run build`
 - `npm run test:desktop`
+- `npm run test:message-markdown` (safe rendering, literal user text, partial
+  code fences, unchanged stored content and 390/1440 pixel widths)
 - `node tests/workspace-tools-smoke.cjs`
 - `node tests/workspace-archive-smoke.cjs`
 - `npm run test:workspace-controls` (five long attachments, all output modes,

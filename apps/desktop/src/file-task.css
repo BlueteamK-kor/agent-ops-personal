@@ -1,0 +1,16 @@
+.file-task-panel { flex: 1; min-height: 0; min-width: 0; padding: 24px; overflow-y: auto; }
+.file-task-panel > header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 24px; }
+.file-task-panel h1 { font-size: 20px; margin: 0; }
+.file-task-panel > header span { font-size: 12px; overflow-wrap: anywhere; color: #626a74; }
+.file-task-panel form { max-width: 880px; }
+.file-task-panel label { display: grid; gap: 8px; font-size: 13px; margin-bottom: 16px; }
+.file-task-panel input, .file-task-panel textarea { width: 100%; min-width: 0; border: 1px solid #ccd1d6; border-radius: 6px; background: white; padding: 10px; font: inherit; }
+.file-task-panel textarea { min-height: 100px; resize: vertical; }
+.file-task-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 14px 0; font-size: 12px; }
+.file-task-review { border-top: 1px solid #dce1e6; margin-top: 24px; padding-top: 18px; }
+.file-task-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.file-task-comparison > div { min-width: 0; }
+.file-task-comparison h2 { font-size: 14px; margin-bottom: 10px; }
+.file-task-comparison pre { max-height: 480px; min-height: 160px; overflow: auto; background: #f2f4f6; padding: 12px; font: 13px/1.65 Consolas, monospace; white-space: pre; }
+.file-task-error { color: #9c3241; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .file-task-panel { padding: 16px; } .file-task-comparison { grid-template-columns: minmax(0, 1fr); } }

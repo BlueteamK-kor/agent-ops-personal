@@ -29,15 +29,6 @@
 .workspace-view-switch { display: flex; border: 1px solid #dfe3e9; border-radius: 4px; margin-right: auto; }
 .workspace-view-switch button { padding: 6px 10px; font-size: 12px; }
 .workspace-view-switch button[aria-pressed=true] { background: #eaf2ee; color: #216c61; }
-.workspace-markdown { font: 13px/1.8 system-ui, sans-serif; overflow-wrap: anywhere; min-width: 0; }
-.workspace-markdown h1 { font-size: 22px; }
-.workspace-markdown h2 { font-size: 19px; }
-.workspace-markdown h3 { font-size: 16px; }
-.workspace-markdown pre { white-space: pre-wrap; padding: 10px; background: #f3f4f6; border-radius: 4px; }
-.workspace-markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
-.workspace-markdown th, .workspace-markdown td { border: 1px solid #dfe3e9; padding: 6px 10px; }
-.workspace-markdown blockquote { border-left: 3px solid #93b7ab; padding-left: 12px; margin-left: 0; color: #566269; }
-.workspace-markdown ul, .workspace-markdown ol { padding-left: 22px; }
 .workspace-link-text { color: #326c85; text-decoration: underline; }
 .workspace-source-image { display: block; max-width: 100%; max-height: 400px; object-fit: contain; margin-top: 12px; }
 .personal-context { flex-wrap: wrap; }

@@ -7,6 +7,7 @@ const { EventEmitter } = require("node:events");
 const { PassThrough, Writable } = require("node:stream");
 const { CodexConnection, safeAuthUrl, childEnvironment, lockedConfig } = require("../electron/codex.cjs");
 const { PersonalService } = require("../electron/personal.cjs");
+const { authorizeExecution } = require('../electron/execution-access.cjs');
 
 function fixture(t, custom = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "btk-codex-unit-"));
@@ -55,6 +56,59 @@ test("Codex startup is lazy, isolates home and strips inherited credentials", as
   assert.equal(lockedConfig.cli_auth_credentials_store, "keyring");
   assert.equal(lockedConfig["features.shell_tool"], false);
   assert.equal(lockedConfig.sandbox_mode, "read-only");
+});
+
+test('full access is native-approved, uses selected cwd, and never leaks to the next text request', async t => {
+  const f = fixture(t);
+  await f.service.state();
+  const previousChild = f.child();
+  const grant = await authorizeExecution('full', { mode: 'personal', connection: 'codex', model: 'fixture-model', workspace: f.directory }, async () => true);
+  await f.service.complete([{ role: 'user', content: 'Create a note' }], 'fixture-model', '', grant);
+  assert.equal(previousChild.killed, true);
+  const start = f.calls.find(call => call.method === 'thread/start');
+  assert.equal(start.params.sandbox, 'danger-full-access');
+  assert.equal(start.params.cwd, fs.realpathSync(f.directory));
+  const fullBoot = f.calls.filter(call => call.exe).at(-1);
+  assert.ok(fullBoot.args.includes('features.shell_tool=true'));
+  assert.ok(fullBoot.args.includes('features.unified_exec=true'));
+  assert.ok(fullBoot.args.includes('features.apps=false'));
+  assert.ok(fullBoot.args.includes('features.multi_agent=false'));
+  assert.equal(f.child().killed, true);
+  assert.equal(f.service.execution, null);
+  assert.equal(f.service.child, null);
+  await assert.rejects(f.service.complete([{ role: 'user', content: 'Again' }], 'fixture-model', '', grant), /승인/);
+  await f.service.complete([{ role: 'user', content: 'Text only' }], 'fixture-model');
+  assert.equal(f.calls.filter(call => call.method === 'thread/start').at(-1).params.sandbox, 'read-only');
+  assert.ok(f.calls.filter(call => call.exe).at(-1).args.includes('features.shell_tool=false'));
+});
+
+test('forged grants and failed full-access turns cannot leave execution enabled', async t => {
+  const f = fixture(t, { handle(message, emit) {
+    if (message.method !== 'thread/start') return false;
+    emit({ id: message.id, error: { code: -1, message: 'fixture failure' } });
+    return true;
+  } });
+  await assert.rejects(f.service.complete([{ role: 'user', content: 'Test' }], 'fixture-model', '', { cwd: f.directory }), /승인/);
+  assert.equal(f.calls.length, 0);
+  const grant = await authorizeExecution('full', { mode: 'personal', connection: 'codex', model: 'fixture-model', workspace: f.directory }, async () => true);
+  await assert.rejects(f.service.complete([{ role: 'user', content: 'Test' }], 'fixture-model', '', grant));
+  assert.equal(f.service.execution, null);
+  assert.equal(f.service.child, null);
+  assert.equal(f.child().killed, true);
+});
+
+test('cancelling full access terminates its runtime and clears its grant', async t => {
+  const f = fixture(t, { wait: true });
+  const grant = await authorizeExecution('full', { mode: 'personal', connection: 'codex', model: 'fixture-model', workspace: f.directory }, async () => true);
+  const request = f.service.complete([{ role: 'user', content: 'Test cancellation' }], 'fixture-model', '', grant);
+  const rejected = assert.rejects(request, /취소/);
+  while (!f.calls.some(call => call.method === 'turn/start')) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.service.cancel().cancelled, true);
+  await rejected;
+  assert.equal(f.child().killed, true);
+  assert.equal(f.service.execution, null);
+  assert.equal(f.service.active, null);
+  assert.equal(f.service.child, null);
 });
 
 test('Codex redline blocks before authentication or process startup', async t => {

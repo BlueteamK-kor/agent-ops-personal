@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, RotateCcw, PanelRight, Square, Plus, X, Settings2, Network, Bot, CircleAlert, Check } from 'lucide-react';
 import { useI18n } from './Language';
 import './team.css';
+import MessageContent from './MessageContent';
 
 const api = () => window.btk.personal.team;
 export default function TeamPanel({ state, run, busy, draft: objective, onDraftChange: setObjective, onStart, onCancel, onClear, onSelect, onCreate, renderEditor }) {
@@ -56,7 +57,7 @@ export default function TeamPanel({ state, run, busy, draft: objective, onDraftC
           {(run?.turns || (run ? [run] : [])).map(turn => <React.Fragment key={turn.id}>
             <article className="personal-message user"><strong>{t('나')}</strong><p>{turn.objective}</p></article>
             <article className="personal-message assistant"><strong>{turn.masterName}</strong><small>{labels[turn.status]}{turn.status === 'running' ? ` · ${labels[turn.phase]}` : ''}</small>
-              {turn.text && <p>{turn.text}</p>}{turn.error && <p role="alert">{errorText(turn.error)}</p>}
+              {turn.text && <MessageContent content={turn.text} />}{turn.error && <p role="alert">{errorText(turn.error)}</p>}
               {turn.workers.some(w => w.error || w.status === 'partial') && <ul className="team-failures">{turn.workers.filter(w => w.error || w.status === 'partial').map(w => <li key={w.agentId}><strong>{w.name}</strong> · {w.error ? errorText(w.error) : t('응답 불완전')}</li>)}</ul>}
               {turn.id === run.id && ['partial', 'failed'].includes(turn.status) && <button type="button" className="outline-button" disabled={locked} onClick={() => onStart({ masterId: turn.masterId, workerIds: turn.workers.map(w => w.agentId), objective: turn.objective, retryOf: turn.id })}><RotateCcw size={15} />{t('미완료 작업 재시도')}</button>}
             </article>
@@ -90,7 +91,7 @@ export default function TeamPanel({ state, run, busy, draft: objective, onDraftC
     {run && <section className="team-result" aria-label={t('팀 실행 결과')}>
       <div className="team-status"><strong role="status">{labels[run.status]}{run.status === 'running' ? ` · ${labels[run.phase]}` : ''}</strong><span>{t('모델 호출')} {run.calls} / {run.workers.length + 2}</span>{run.status === 'running' && <button className="icon-button" title={t('팀 작업 중단')} aria-label={t('팀 작업 중단')} onClick={onCancel}><Square size={16} /></button>}</div>
       <p>{run.objective}</p>
-      {run.workers.map(worker => <article className="team-worker" key={worker.sessionId}><header><strong>{worker.name}</strong><span>{worker.model}</span><span>{labels[worker.status]}</span></header><p>{worker.task}</p>{worker.text && <details><summary>{t('작업 결과')}</summary><p>{worker.text}</p></details>}</article>)}
+      {run.workers.map(worker => <article className="team-worker" key={worker.sessionId}><header><strong>{worker.name}</strong><span>{worker.model}</span><span>{labels[worker.status]}</span></header><p>{worker.task}</p>{worker.text && <details><summary>{t('작업 결과')}</summary><MessageContent content={worker.text} /></details>}</article>)}
     </section>}
       </aside></>}
     </div>

@@ -25,8 +25,8 @@
 .personal-empty h1 { font-size: 28px; text-align: center; }
 .personal-empty span { color: #777d86; font-size: 13px; overflow-wrap: anywhere; }
 .personal-message { padding: 18px 0; overflow-wrap: anywhere; }
-.personal-message strong { font-size: 12px; color: #286a54; }
-.personal-message.user strong { color: #565e71; }
+.personal-message > strong { font-size: 12px; color: #286a54; }
+.personal-message.user > strong { color: #565e71; }
 .personal-message p { white-space: pre-wrap; line-height: 1.75; margin-top: 8px; }
 .personal-message small { display: block; color: #737780; margin-top: 8px; }
 .personal-message-actions { display: grid; grid-template-columns: minmax(0, 1fr) 32px 32px; align-items: center; width: fit-content; max-width: 100%; gap: 8px; margin-top: 8px; color: #9c3241; font-size: 12px; }
@@ -120,6 +120,11 @@
 .personal-app .personal-transcript { max-height: none; }
 .personal-app .personal-chat { min-height: 0; }
 .personal-app .composer-bottom > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.execution-access { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 8px; min-height: 32px; font-size: 12px; }
+.execution-access label { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.execution-access select { width: 150px; max-width: 100%; height: 32px; padding: 4px 6px; font-size: 12px; }
+.execution-access > span { color: #92531a; overflow-wrap: anywhere; }
+.execution-access[data-access="full"] select { border-color: #b97832; }
 .personal-app .personal-error { flex-shrink: 0; max-height: 100px; overflow-y: auto; }
 .personal-nav-scrim, .personal-summary-scrim { display: none; }
 @media (max-width: 1100px) {

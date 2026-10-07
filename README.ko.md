@@ -47,7 +47,7 @@
 
 0.5.15부터 Personal에서 새 버전을 자동 확인합니다. 사이드바의 **앱 업데이트**에서 다운로드하고 재시작·설치를 승인할 수 있습니다. 이전 버전은 이번 설치본을 한 번 직접 설치해야 합니다. [업데이트 동작과 제한](docs/desktop-updates.md).
 
-1. [릴리스 페이지](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest)에서 `AEGIS-Agent-Ops-Setup-0.5.19.exe`를 내려받습니다.
+1. [릴리스 페이지](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest)에서 `AEGIS-Agent-Ops-Setup-0.5.20.exe`를 내려받습니다.
 2. Windows x64에 설치하고 **Personal**을 선택합니다.
 3. 에이전트의 모델 연결을 설정한 뒤 대화하거나 팀을 구성합니다.
 
@@ -171,7 +171,7 @@ Personal 모델 요청은 Electron 측 어댑터가 처리합니다. 패키지�
 
 ## 현재 제한
 
-- 일반 파일 접근, 셸 명령 실행, 자율적인 도구 실행은 지원하지 않습니다.
+- 기본은 대화 전용입니다. ChatGPT/Codex의 [전체 접근](docs/personal-execution-access.md)은 요청별 승인 후 폴더 밖 파일·명령·네트워크 접근을 허용하며 관리자 승격은 하지 않습니다. 다른 공급자와 팀 작업에는 자동 적용되지 않습니다.
 - 메모리는 수동·키워드 기반이며 자동 학습, 임베딩, 클라우드 동기화는 없습니다.
 - Slack 샘플은 메시지 전송이나 Slack을 통한 업무 배정을 하지 않습니다.
 - 실제 Google OAuth 로그인·추론과 새 PC 설치는 자동화된 모의 시험 외에 추가 검증이 필요합니다.
@@ -235,7 +235,7 @@ powershell -NoProfile -File apps/desktop/build-windows.ps1
 | [공개 이력](docs/public-history.md) | 제품 이력을 선별한 이유 |
 | [보안 정책](SECURITY.md) | 비공개 취약점 신고 |
 
-우선 검증 대상은 새 PC 설치와 실제 공급자·계정 연결이며, 특히 Google 로그인의 실제 사용 흐름을 확인해야 합니다. 앱 대화 영속 저장은 구현되어 있으며 커넥터 확장·도구 실행은 이후 검토할 방향이지 **출시 일정 약속이 아닙니다.** 외부 쓰기 작업을 허용하기 전에 권한과 데이터 전달 경계를 설계해야 합니다.
+우선 검증 대상은 새 PC 설치와 실제 공급자·계정 연결이며, 특히 Google 로그인의 실제 사용 흐름을 확인해야 합니다. 앱 대화 저장, [단일 파일 승인 저장](docs/personal-task-runtime.md), 요청별 Codex 전체 접근은 구현되어 있습니다. 커넥터 확장·공급자 공통 및 팀 도구 실행은 이후 검토할 방향이지 **출시 일정 약속이 아닙니다.** 새로운 외부 쓰기 작업에는 명시적인 권한과 데이터 전달 경계가 필요합니다.
 
 `docs/`의 이전 구현 기록은 각각의 개발 단계를 설명합니다. 현재 릴리스의 범위는 이 README를 기준으로 하며 과거 시험 개수나 잔여 작업 목록은 현재 지원표가 아닙니다.
 
