@@ -15,6 +15,7 @@ test('AZWOL icon frames and physical update identities are preserved', () => {
   assert.equal(config.nsis.installerIcon, config.win.icon);
   assert(config.files.includes('branding/**'));
   assert.equal(config.publish.repo, 'agent-ops-personal');
+  assert.equal(config.publish.owner, 'BlueteamK-kor');
   const main = fs.readFileSync(path.join(root, 'electron/main.cjs'), 'utf8');
   assert(main.includes("icon: path.join(__dirname, '../branding/azwol.ico')"));
   assert(!/setFeedURL[\s\S]*data\.mode/.test(main));

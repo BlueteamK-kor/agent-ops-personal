@@ -36,5 +36,5 @@
     "deleteAppDataOnUninstall": false,
     "installerLanguages": ["ko_KR", "en_US"]
   },
-  "publish": { "provider": "github", "owner": "aegisintelmetry", "repo": "agent-ops-personal", "releaseType": "release" }
+  "publish": { "provider": "github", "owner": "BlueteamK-kor", "repo": "agent-ops-personal", "releaseType": "release" }
 }

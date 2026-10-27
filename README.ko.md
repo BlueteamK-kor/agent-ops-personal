@@ -1,11 +1,11 @@
 # AZWOL Personal
 
-[![Windows checks](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml)
+[![Windows checks](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](LICENSE)
 
 **내 모델로 구성하는 에이전트 팀, 직접 선택하는 메모리.**
 
-[English](README.md) | [Windows 다운로드](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest) | [보안 신고](SECURITY.md)
+[English](README.md) | [Windows 다운로드](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest) | [보안 신고](SECURITY.md)
 
 여러 언어 모델과 대화하고, 텍스트 작업을 에이전트 팀으로 나누고, 필요한 기억을 직접 관리하는 **AEGIS의 오픈소스 데스크톱 프로젝트**입니다.
 
@@ -55,7 +55,7 @@ Codex 이력의 명시적 가져오기를 추가합니다. 가져온 이력은 �
 
 0.5.15부터 Personal에서 새 버전을 자동 확인합니다. 사이드바의 **앱 업데이트**에서 다운로드하고 재시작·설치를 승인할 수 있습니다. 이전 버전은 이번 설치본을 한 번 직접 설치해야 합니다. [업데이트 동작과 제한](docs/desktop-updates.md).
 
-1. 현재 공개 설치본은 [릴리스 페이지](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest)에서 확인합니다. 로컬 후보의 예정 파일명은 `AEGIS-Agent-Ops-Setup-0.5.21.exe`이며, 이 문서만으로 빌드·검증·공개 완료를 주장하지 않습니다.
+1. 현재 공개 설치본은 [릴리스 페이지](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest)에서 확인합니다. 로컬 후보의 예정 파일명은 `AEGIS-Agent-Ops-Setup-0.5.21.exe`이며, 이 문서만으로 빌드·검증·공개 완료를 주장하지 않습니다.
 2. Windows x64에 설치하고 **Personal**을 선택합니다.
 3. 에이전트의 모델 연결을 설정한 뒤 대화하거나 팀을 구성합니다.
 
@@ -250,7 +250,7 @@ npm start
 powershell -NoProfile -File apps/desktop/build-windows.ps1
 ```
 
-버그 재현, 작은 범위의 개선 PR, 실제로 유용했던 작업 사례를 환영합니다. [기여 안내](CONTRIBUTING.md)와 [Windows CI](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml)를 참고하세요.
+버그 재현, 작은 범위의 개선 PR, 실제로 유용했던 작업 사례를 환영합니다. [기여 안내](CONTRIBUTING.md)와 [Windows CI](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml)를 참고하세요.
 
 ## 문서와 다음 단계
 
@@ -281,7 +281,7 @@ powershell -NoProfile -File apps/desktop/build-windows.ps1
 
 ## 보안과 라이선스
 
-**초기 테스트·개발 참여자를 모집합니다.** [참여 안내](docs/community-invitation.md)를 읽고 [Discussions](https://github.com/aegisintelmetry/agent-ops-personal/discussions)에서 질문과 보안·통제 설계 의견을 나눠 주세요. 계획 중인 권한·감사 기능은 현재 제공 보장이 아닙니다. [행동강령](CODE_OF_CONDUCT.md)을 지켜 주세요.
+**초기 테스트·개발 참여자를 모집합니다.** [참여 안내](docs/community-invitation.md)를 읽고 [Discussions](https://github.com/BlueteamK-kor/agent-ops-personal/discussions)에서 질문과 보안·통제 설계 의견을 나눠 주세요. 계획 중인 권한·감사 기능은 현재 제공 보장이 아닙니다. [행동강령](CODE_OF_CONDUCT.md)을 지켜 주세요.
 
 취약점은 공개 이슈 대신 **contact@aegistelemetry.com**으로 비공개 신고해 주세요. 키·토큰·개인 대화를 첨부하지 마세요. [보안 정책](SECURITY.md)을 확인하세요.
 

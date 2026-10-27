@@ -1,5 +1,10 @@
 # AZWOL Personal 0.5.92
 
+The public source, releases and future in-app updates move to
+`BlueteamK-kor/agent-ops-personal`. Install the new full installer once to adopt
+the new feed; earlier binaries cannot discover a repository change by themselves.
+Earlier licensed product history and copyright notices are preserved.
+
 - AZWOL blue owl branding in the app, Windows executable and installer.
 - Public Personal updates do not require an organization profile or operator login.
 - Update failures distinguish connectivity, missing release, authentication and verification errors without displaying private URLs or credentials.

@@ -1,11 +1,11 @@
 # AZWOL Personal
 
-[![Windows checks](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml)
+[![Windows checks](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](LICENSE)
 
 **Your models. A visible agent team. Memory you choose.**
 
-[한국어](README.ko.md) | [Windows download](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest) | [Security](SECURITY.md)
+[한국어](README.ko.md) | [Windows download](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest) | [Security](SECURITY.md)
 
 An open-source desktop project by **AEGIS** for working with multiple language models, coordinating text-based agent teams, and keeping explicit local memory.
 
@@ -56,7 +56,7 @@ For example, one worker can analyze a proposal while another critiques its assum
 ## Install
 
 The current public release is available on the
-[release page](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest).
+[release page](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest).
 The planned local candidate filename is `AEGIS-Agent-Ops-Setup-0.5.21.exe`;
 this document does not claim it has been built, verified, or published.
 
@@ -263,7 +263,7 @@ Build an installer from the repository root:
 powershell -NoProfile -File apps/desktop/build-windows.ps1
 ```
 
-See [contributing](CONTRIBUTING.md) and [Windows CI](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml).
+See [contributing](CONTRIBUTING.md) and [Windows CI](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml).
 
 ## Documentation and Next Steps
 
@@ -294,7 +294,7 @@ The source includes `apps/desktop`, the `agent_ops` client/core, and tests. Priv
 
 ## Feedback and Security
 
-**Early testers and contributors welcome:** read our [community invitation](docs/community-invitation.md) and join [Discussions](https://github.com/aegisintelmetry/agent-ops-personal/discussions). We are exploring security and control features openly; planned permissions and audit capabilities are not shipped guarantees. Please follow the [code of conduct](CODE_OF_CONDUCT.md).
+**Early testers and contributors welcome:** read our [community invitation](docs/community-invitation.md) and join [Discussions](https://github.com/BlueteamK-kor/agent-ops-personal/discussions). We are exploring security and control features openly; planned permissions and audit capabilities are not shipped guarantees. Please follow the [code of conduct](CODE_OF_CONDUCT.md).
 
 Bug reports, focused pull requests, and useful real-world workflows are welcome. Include the app version, Windows version, and reproduction steps without credentials or private conversations.
 

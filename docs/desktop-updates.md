@@ -1,11 +1,13 @@
 # Desktop Updates
 
-Windows Personal 0.5.15 introduces in-app updates using electron-updater and the
-public `aegisintelmetry/agent-ops-personal` GitHub Releases feed. Older versions
-must install 0.5.15 manually once; they do not contain an update client.
+AZWOL Personal 0.5.92 uses electron-updater with the public
+`BlueteamK-kor/agent-ops-personal` GitHub Releases feed. Earlier installers still
+point to the previous repository and require the new installer once to change
+feeds. No update is published to the previous repository.
 
-The 0.5.21 working tree is a **local build candidate**, not a published update.
 Building an installer does not change the public feed or update installed apps.
+Organization/Harness installations use their separate organization channel, even
+in Personal mode. Never replace them with a public Personal installer.
 
 - Opening Personal starts a check after 15 seconds, then every six hours.
 - App updates in the sidebar also supports manual checks and retries.

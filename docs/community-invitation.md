@@ -43,12 +43,12 @@ Windows 사용자, 개발자, 보안 실무자 5~10명부터 피드백을 받고
 
 ## 시작하기
 
-[모집 토론에 참여하기 / Join the recruitment discussion](https://github.com/aegisintelmetry/agent-ops-personal/discussions/3)
+[모집 토론에 참여하기 / Join the recruitment discussion](https://github.com/BlueteamK-kor/agent-ops-personal/discussions)
 
-- [설치·현재 지원 범위](https://github.com/aegisintelmetry/agent-ops-personal#readme)
-- [다운로드](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest)
-- [질문과 제안](https://github.com/aegisintelmetry/agent-ops-personal/discussions)
-- [버그 신고](https://github.com/aegisintelmetry/agent-ops-personal/issues/new/choose)
+- [설치·현재 지원 범위](https://github.com/BlueteamK-kor/agent-ops-personal#readme)
+- [다운로드](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest)
+- [질문과 제안](https://github.com/BlueteamK-kor/agent-ops-personal/discussions)
+- [버그 신고](https://github.com/BlueteamK-kor/agent-ops-personal/issues/new/choose)
 
 설치 파일은 미서명입니다. 새 PC 설치와 실제 Google OAuth 연결은 추가 검증 대상입니다.
 채팅은 앱 종료 후 복원되지 않으며, 모델 사용료·계정 권한은 공급자에 따릅니다.
