@@ -23,7 +23,7 @@ function Assert-PersonalDirectory([string]$Directory) {
         $file = Get-Item -LiteralPath $manifest -Force
         if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $file.Length -gt 4194304) { throw 'invalid release' }
         $release = Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($release.schema -cne 'btk.desktop.release.v1' -or $release.harness_runtime -or $release.development_updates) { throw 'different installation family' }
+        if ($release.schema -cne 'btk.desktop.release.v1' -or $release.channel -cne 'local-preview' -or $release.harness_required -or $release.harness_runtime -or $release.development_updates) { throw 'different installation family' }
     }
     if (Test-Path -LiteralPath (Join-Path $full 'resources\harness-runtime')) { throw 'enterprise runtime present' }
     foreach ($name in @('harness-runtime.zip','harness-runtime.json')) {

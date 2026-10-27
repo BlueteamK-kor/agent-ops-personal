@@ -16,7 +16,9 @@ test('Personal installer refuses integrated releases and active runtimes without
   assert.equal(check(false), 0);
   fs.writeFileSync(path.join(resources, 'desktop-release.json'), JSON.stringify({ schema: 'btk.desktop.release.v1', harness_runtime: { version: '5.186' } }));
   assert.equal(check(false), 2);
-  fs.writeFileSync(path.join(resources, 'desktop-release.json'), JSON.stringify({ schema: 'btk.desktop.release.v1' }));
+  fs.writeFileSync(path.join(resources, 'desktop-release.json'), JSON.stringify({ schema: 'btk.desktop.release.v1', channel: 'enterprise-profile-session-preview' }));
+  assert.equal(check(false), 2);
+  fs.writeFileSync(path.join(resources, 'desktop-release.json'), JSON.stringify({ schema: 'btk.desktop.release.v1', channel: 'local-preview' }));
   assert.equal(check(false), 0);
   assert.equal(check(true), 2);
   fs.mkdirSync(path.join(resources, 'core'));
