@@ -162,3 +162,13 @@
 .update-dialog p { overflow-wrap: anywhere; }
 .update-dialog progress { width: 100%; }
 .personal-app .sidebar-bottom { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.personal-message .personal-message-error { margin-top: 6px; color: #9c3241; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.personal-app .session-select .session-job-state { flex: 0 0 auto; max-width: 60px; font-size: 10px; color: #276d54; white-space: nowrap; }
+.history-notice, .history-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 16px; border-bottom: 1px solid #e4e7e6; font-size: 12px; flex-shrink: 0; min-width: 0; }
+.history-notice { background: #edf6f2; }
+.history-notice > button { margin-left: auto; }
+.history-toolbar > span { overflow-wrap: anywhere; }
+.history-pages { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.history-toolbar .icon-button { width: 32px; height: 32px; flex-shrink: 0; }
+.history-pages small { min-width: 100px; text-align: center; white-space: nowrap; }

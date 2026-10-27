@@ -1,4 +1,4 @@
-# AEGIS Agent Ops Personal
+# AZWOL Personal
 
 [![Windows checks](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/aegisintelmetry/agent-ops-personal/actions/workflows/desktop-checks.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](LICENSE)
@@ -14,6 +14,10 @@ An open-source desktop project by **AEGIS** for working with multiple language m
 ![Team conversation and coordinator/worker tree](docs/assets/team-workspace.png)
 
 *Actual desktop UI captured by an automated test. Names, model IDs, and responses are synthetic fixtures, not live provider results or a performance benchmark.*
+
+AZWOL is the new app identity. Existing installation identifiers and local data
+locations remain unchanged. See [0.5.92 update notes](docs/release-0.5.92.md)
+for the public Personal and organization installer boundaries.
 
 ## Contents
 
@@ -42,11 +46,19 @@ An open-source desktop project by **AEGIS** for working with multiple language m
 - Switch between Korean and English.
 - Try a read-only Slack sample for authentication checks and public-channel listing.
 
+The 0.5.21 candidate adds separate live conversation sessions with queued,
+running, and cancelling states, plus an explicit import of recent VS Code Codex
+history. Imported history is a local copy; it does not resume the original
+Codex process or require an AEGIS central server.
+
 For example, one worker can analyze a proposal while another critiques its assumptions, with the coordinator combining their responses. This is model-generated assistance, not independent verification of correctness.
 
 ## Install
 
-Download `AEGIS-Agent-Ops-Setup-0.5.20.exe` from the [release page](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest).
+The current public release is available on the
+[release page](https://github.com/aegisintelmetry/agent-ops-personal/releases/latest).
+The planned local candidate filename is `AEGIS-Agent-Ops-Setup-0.5.21.exe`;
+this document does not claim it has been built, verified, or published.
 
 Starting with 0.5.15, Personal checks for updates automatically. Use **App updates**
 in the sidebar to download, then confirm restart/install. Older versions require
@@ -137,11 +149,31 @@ Memory is explicitly saved context, not automatic learning from all your convers
 
 Records are manually maintained and must be enabled. Keyword matching selects up to three relevant records alongside the role prompt. There is no vector database, automatic conversation ingestion, or cloud memory synchronization.
 
-Saved prompts and memory persist locally in encrypted storage; ordinary chat history does not survive quitting. Keep secrets out of memory: applicable records become part of model requests, and worker responses may reveal their contents to the coordinator.
+Saved prompts, memory, and Personal workspace conversations persist locally in
+encrypted storage. Keep secrets out of memory: applicable records become part
+of model requests, and worker responses may reveal their contents to the
+coordinator.
 
 ## Data and Permissions
 
-Credentials and saved prompts/memory use the operating system's encrypted storage. Conversation history is held in memory and is not restored after quitting.
+Credentials, saved prompts/memory, and the Personal workspace use operating
+system encryption. `agent-ops-personal/workspace.enc` under the app's user-data
+directory stores conversations, drafts, attached source excerpts, and images.
+Successful saves are restored after restarting. Check the visible save status;
+an unreadable store is preserved rather than overwritten. Interrupted requests
+restore as interrupted history, not as live jobs to replay automatically.
+
+The 0.5.21 history import reads supported local VS Code Codex databases without
+changing them and selects threads active within the previous seven days. It
+creates encrypted archive snapshots and a workspace backup alongside the copied
+conversations. Importing can therefore retain execution items and source metadata
+beyond the text shown in the conversation.
+
+Deleting a conversation updates the app workspace after a successful save. It
+does not erase original Codex history, imported archive snapshots/backups,
+exported files, or provider/CLI records. There is no automatic retention expiry
+or secure-erasure guarantee. The Windows uninstaller retains application data;
+removing the app does not revoke provider credentials.
 
 Requests send conversation text and applicable enabled memory/role prompts to the selected model provider. Team objectives and worker results are shared with the coordinator. Agent-specific memory is not directly copied to other agents, but its contents can appear in generated results.
 
@@ -196,7 +228,7 @@ Automated tests cover local behavior, isolation, UI flows, and packaging. They d
 | Sign-in works but inference fails | Authentication does not guarantee API entitlement, project configuration, or access to the selected model |
 | Team run is partial | Inspect the failed worker, fix its connection, and explicitly retry; do not treat the run as complete |
 | Memory is not used | Check whether the record is enabled, its scope, and keyword relevance |
-| Chats disappear after restart | Conversation persistence is not implemented; settings and saved memory are separate |
+| Chats do not restore after restart | Check the workspace save/restore status and the same Windows account/user-data directory; preserve an unreadable store before troubleshooting |
 | Slack cannot send a message | The sample is read-only and supports authentication and public-channel listing only |
 
 **Is the app free?** The repository is licensed under Apache-2.0. Model providers may charge for inference. No provider credits are included.
@@ -205,7 +237,10 @@ Automated tests cover local behavior, isolation, UI flows, and packaging. They d
 
 **Is this fully offline?** Only when you deliberately use a suitable local compatible inference endpoint. Selecting a cloud provider sends requests to that provider.
 
-**Does uninstalling erase everything?** The Windows uninstaller retains application data. Do not assume uninstalling revokes provider credentials or deletes saved configuration.
+**Does uninstalling erase everything?** No. The Windows uninstaller retains
+application data, including saved conversations, settings, and any imported
+history archives. Conversation deletion is not provider credential revocation
+or deletion of external CLI history, exports, and backups.
 
 ## Development
 
@@ -238,13 +273,16 @@ See [contributing](CONTRIBUTING.md) and [Windows CI](https://github.com/aegisint
 | [Google connections](docs/personal-google-accounts.md) | Desktop OAuth setup and credential boundaries |
 | [Module boundaries](docs/core-boundary.md) | Public product versus private operations |
 | [Contributing](CONTRIBUTING.md) | Development and safe issue/PR preparation |
+| [0.5.21 candidate](docs/release-0.5.21.md) | Selective Personal changes and validation still required before publication |
 | [Release checks](docs/public-release.md) | Release verification and outstanding operational checks |
 | [Public history](docs/public-history.md) | Why this repository contains selected product history |
 | [Security policy](SECURITY.md) | Private vulnerability reporting |
 
 Near-term validation priorities are fresh-PC installation and real provider/account flows, particularly Google sign-in. App conversation persistence, approved single-file saves and per-request Codex Full access are implemented. Broader connectors and provider-independent or team tool execution remain possible future work, **not promised release dates**. New external writes require explicit permission and data-flow boundaries.
 
-Older implementation notes in `docs/` describe individual development stages. This README describes the current release; historical test counts and pending items are not a current support matrix.
+Older implementation notes in `docs/` describe individual development stages.
+This README distinguishes the public baseline from the local 0.5.21 candidate;
+historical test counts are not evidence that the candidate has passed validation.
 
 ## History and Scope
 

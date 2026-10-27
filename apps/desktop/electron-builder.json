@@ -6,7 +6,7 @@
   "asarUnpack": ["node_modules/@google/gemini-cli/**"],
   "afterPack": "./after-pack.cjs",
   "directories": { "output": "release" },
-  "files": ["dist/**", "electron/**", "package.json", "workspace-limits.json"],
+  "files": ["dist/**", "electron/**", "branding/**", "package.json", "workspace-limits.json"],
   "extraResources": [
     { "from": "../../LICENSE", "to": "LICENSE" },
     { "from": "../../NOTICE", "to": "NOTICE" },
@@ -16,12 +16,15 @@
   ],
   "npmRebuild": false,
   "win": {
+    "icon": "branding/azwol.ico",
     "target": [{ "target": "nsis", "arch": ["x64"] }],
     "artifactName": "AEGIS-Agent-Ops-Setup-${version}.${ext}",
     "requestedExecutionLevel": "asInvoker",
     "signExecutable": false
   },
   "nsis": {
+    "installerIcon": "branding/azwol.ico",
+    "uninstallerIcon": "branding/azwol.ico",
     "include": "installer.nsh",
     "oneClick": false,
     "perMachine": false,

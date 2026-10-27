@@ -26,6 +26,9 @@ function validateImage(value, limit) {
 }
 const { WorkspaceStore } = require('./workspace-store.cjs');
 const { WorkspaceImporter } = require('./workspace-import.cjs');
+const { CodexHistory } = require('./codex-history.cjs');
+const { Conversations } = require('./conversations.cjs');
+const conversations = new Conversations();
 const { FileTask } = require('./file-task.cjs');
 const fileTask = new FileTask();
 
@@ -93,6 +96,27 @@ else {
       return workspace.save(params);
     };
     for (const method of ['read', 'save']) ipcMain.handle(`btk:workspace:${method}`, (event, params) => workspaceRequest(event, method, params));
+    for (const method of ['import', 'folder']) ipcMain.handle(`btk:history:${method}`, async (event, params) => {
+      if (!trustedFrame(event, window, entry) || personalFailure || personal.data.mode !== 'personal') throw new PersonalError('개인용 모드에서만 이력을 가져올 수 있습니다.');
+      if (params?.agentId !== agents.data.selected) throw new PersonalError('대화의 에이전트가 변경되었습니다. 선택 상태를 확인해 주세요.');
+      personal.idle();
+      if (conversations.active || team.active || personalDialogActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
+      personalDialogActive = true;
+      try {
+        const groups = workspace.load();
+        if (method === 'folder') {
+          const imported = groups[params.agentId]?.items.find(item => item.id === params.sessionId)?.importedFrom;
+          if (!imported) throw new PersonalError('가져온 세션을 선택해 주세요.');
+          return agents.state(personal.workspace(imported.cwd));
+        }
+        const answer = await dialog.showMessageBox(window, { type: 'question', title: t('VS Code 세션 가져오기'),
+          message: t('최근 7일의 VS Code Codex 대화를 가져올까요?'),
+          detail: t('대화와 도구 실행 기록을 이 PC의 암호화된 앱 저장소에 복사합니다. 원본은 변경하지 않으며 모델 요청은 보내지 않습니다.'),
+          buttons: [t('취소'), t('가져오기')], defaultId: 0, cancelId: 0 });
+        if (answer.response !== 1) throw new PersonalError('가져오기를 취소했습니다.');
+        return await new CodexHistory({ directory: agents.directory, safeStorage }).import(groups, params.agentId);
+      } finally { personalDialogActive = false; }
+    });
     ipcMain.on('btk:workspace:flush', (event, params) => {
       try { event.returnValue = workspaceRequest(event, 'save', params); }
       catch { event.returnValue = { saved: false }; }
@@ -112,6 +136,77 @@ else {
       try { return await codex.complete(messages, personal.data.codexModel, personal.data.codexReasoningEffort || '', options?.execution); }
       finally { personal.codexActive = false; }
     };
+    const executeConversation = async (params, agent, service, perform, cancelled = () => false) => {
+      const generating = params.output === 'image';
+      const messages = prepareMessages(params.messages, { ErrorType: PersonalError });
+      const images = messages.flatMap(message => message.images || []), imageModel = params.imageModel;
+      if (generating && (typeof imageModel !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(imageModel) || agent.connection === 'codex' || !['openai', 'gemini', 'compatible', 'local'].includes(agent.provider))) throw new PersonalError('image_unsupported');
+      if (generating && (images.length || messages.length !== 1)) throw new PersonalError('image_prompt_only');
+      for (const image of images) validateImage(image);
+      if (generating || images.length) {
+        service.idle(); personalDialogActive = true;
+        try {
+          const answer = await dialog.showMessageBox(window, { type: 'question', title: t('이미지 요청 확인'), buttons: [t('취소'), t('계속')], defaultId: 0, cancelId: 0,
+            message: t(generating ? '선택한 모델로 이미지를 생성할까요?' : '첨부 이미지를 선택한 모델에 전송할까요?'),
+            detail: `${agent.endpoint}\n${generating ? imageModel : agent.model}\n${t('이미지 수')}: ${images.length}\n${t('공급자 사용량 또는 API 요금이 발생합니다. 이미지 내부의 민감 정보는 자동 검사하지 않습니다.')}` });
+          if (answer.response !== 1 || cancelled()) throw new PersonalError('요청을 취소했습니다.');
+        } finally { personalDialogActive = false; }
+      }
+      if (generating && params.access && params.access !== 'chat') throw new PersonalError('지원하지 않는 실행 권한입니다.');
+      let execution;
+      if (params.access !== undefined && params.access !== 'chat') {
+        service.idle(); personalDialogActive = true;
+        try {
+          execution = await require('./execution-access.cjs').authorizeExecution(params.access, agent, async info => {
+            const answer = await dialog.showMessageBox(window, { type: 'warning', title: t('전체 접근 승인'), message: t('이 요청에 전체 접근을 허용할까요?'),
+              detail: `${info.agentName}\n${info.model}\n${info.cwd}\n\n${t('작업 폴더 밖을 포함하여 현재 사용자 권한으로 파일 읽기·수정·삭제, 명령 실행 및 네트워크 전송이 가능합니다. 파일과 도구 결과가 모델 공급자에게 전송될 수 있으며 자동 민감 정보 검사를 보장하지 않습니다. 관리자 권한을 부여하지 않습니다. 이 요청에만 적용되며, 중단해도 이미 수행한 변경은 되돌리지 않습니다.')}`,
+              buttons: [t('취소'), t('이번 요청 허용')], defaultId: 0, cancelId: 0 });
+            return answer.response === 1 && !cancelled();
+          }, async () => {
+            const selection = await dialog.showOpenDialog(window, { title: t('전체 접근 작업 폴더'), properties: ['openDirectory'] });
+            if (selection.canceled || !selection.filePaths[0] || cancelled()) return undefined;
+            const value = service.workspace(selection.filePaths[0]);
+            if (agents.data.selected === agent.agentId) personal.data = { ...personal.data, workspace: value.workspace };
+            return value.workspace;
+          });
+        } finally { personalDialogActive = false; }
+      }
+      if (cancelled()) throw new PersonalError('요청을 취소했습니다.');
+      const result = await perform(messages, generating ? { imageModel } : { execution });
+      for (const image of result.images || []) validateImage(image, OUTPUT_LIMIT);
+      return { ...result, agentId: agent.agentId, agentName: agent.agentName, model: generating ? imageModel : agent.model };
+    };
+    conversations.on('change', value => { if (window && !window.isDestroyed()) window.webContents.send('btk:sessions:changed', value); });
+    for (const method of ['state', 'submit', 'cancel']) ipcMain.handle(`btk:sessions:${method}`, async (event, params) => {
+      if (!trustedFrame(event, window, entry) || personalFailure || personal.data.mode !== 'personal') throw new Error('Untrusted request');
+      if (method === 'state') return conversations.state();
+      if (method === 'cancel') return conversations.cancel(params);
+      try {
+        if (params?.agentId !== agents.data.selected) throw new PersonalError('대화의 에이전트가 변경되었습니다. 선택 상태를 확인해 주세요.');
+        personal.idle();
+        if (team.active || setupActive || codex.loginId || googleAccounts.pending || geminiCli.pending || (personalDialogActive && !conversations.active)) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
+        if (!['chat', 'full'].includes(params.access) || !['chat', 'image'].includes(params.output)) throw new PersonalError('지원하지 않는 실행 권한입니다.');
+        const source = workspace.load()[params.agentId]?.items.find(item => item.id === params.sessionId);
+        if (!source) throw new PersonalError('대화 요청 정보를 확인해 주세요.');
+        const cwd = source.importedFrom?.cwd;
+        const identity = { agentId: params.agentId, agentName: agents.data.agents.find(item => item.id === params.agentId).name };
+        const messages = prepareMessages(params.messages, { ErrorType: PersonalError });
+        const snapshot = knowledge.snapshot(params.agentId);
+        const input = { ...params, messages };
+        const exclusive = params.access === 'full' || params.output === 'image' || messages.some(message => message.images?.length);
+        return await conversations.submit({ ...params, exclusive }, cancelled => {
+          const service = agents.open(params.agentId);
+          service.data = { ...service.data, workspace: cwd || service.data.workspace };
+          const agent = { ...service.state(), ...identity };
+          const connection = agent.connection === 'codex' ? new CodexConnection({ directory: agents.location(params.agentId), cwd, openExternal: url => shell.openExternal(url) }) : null;
+          const perform = (rows, options) => {
+            const enriched = enrich(rows, snapshot, rows.at(-1)?.content);
+            return connection ? connection.complete(enriched, agent.model, agent.reasoningEffort || '', options?.execution) : service.complete(enriched, options);
+          };
+          return { run: () => executeConversation(input, agent, service, perform, cancelled), cancel: () => connection ? connection.cancel() : service.cancel(), close: () => connection?.stop() };
+        });
+      } catch (error) { throw new Error(error instanceof PersonalError ? error.message : '개인용 요청을 처리하지 못했습니다.'); }
+    });
     for (const method of ['generate', 'apply', 'cancel']) ipcMain.handle(`btk:file-task:${method}`, async (event, params) => {
       if (!trustedFrame(event, window, entry) || personalFailure || personal.data.mode !== 'personal') throw new Error('Untrusted request');
       if (params?.agentId !== agents.data.selected) throw new Error('file_task_expired');
@@ -121,7 +216,7 @@ else {
         return personal.data.connection === 'codex' ? codex.cancel() : personal.cancel();
       }
       personal.idle();
-      if (personalDialogActive || team.active || setupActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new Error('file_task_busy');
+      if (conversations.active || personalDialogActive || team.active || setupActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new Error('file_task_busy');
       personalDialogActive = true;
       try {
         const agent = agents.state();
@@ -157,7 +252,7 @@ else {
         if (params?.agentId !== agents.data.selected || personal.data.connection !== 'gemini-cli') throw new PersonalError('대화의 에이전트가 변경되었습니다. 선택 상태를 확인해 주세요.');
         if (method === 'state') return geminiCli.state();
         personal.idle();
-        if (team.active || personalDialogActive || codex.loginId || googleAccounts.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
+        if (conversations.active || team.active || personalDialogActive || codex.loginId || googleAccounts.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
         if (method === 'cancelLogin') return await geminiCli.cancelLogin();
         if (geminiCli.pending) throw new PersonalError('진행 중인 로그인을 완료하거나 취소해 주세요.');
         if (method === 'login') return geminiCli.login();
@@ -183,7 +278,7 @@ else {
         if (params?.agentId !== agents.data.selected) throw new PersonalError('대화의 에이전트가 변경되었습니다. 선택 상태를 확인해 주세요.');
         if (method === 'state') return googleState();
         personal.idle();
-        if (team.active || personalDialogActive || codex.loginId || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
+        if (conversations.active || team.active || personalDialogActive || codex.loginId || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
         if (method === 'cancelLogin') { googleAccounts.cancelLogin(); return googleState(); }
         if (method === 'reopenLogin') { googleAccounts.reopenLogin(params.id); return googleState(); }
         if (googleAccounts.pending) throw new PersonalError('진행 중인 로그인을 완료하거나 취소해 주세요.');
@@ -214,7 +309,7 @@ else {
       if (params?.agentId !== agents.data.selected) throw new PersonalError('대화의 에이전트가 변경되었습니다. 선택 상태를 확인해 주세요.');
       if (method === 'read') return knowledge.state(agents.data.selected);
       personal.idle();
-      if (team.active || personalDialogActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
+      if (conversations.active || team.active || personalDialogActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
       if (method === 'prompt') return knowledge.prompt(agents.data.selected, params.value);
       if (method === 'save') return knowledge.upsert(agents.data.selected, params.record);
       return knowledge.remove(agents.data.selected, params.id);
@@ -225,7 +320,7 @@ else {
       if (method === 'configuration') return agents.teamState();
       if (method === 'cancel') return team.cancel();
       personal.idle();
-      if (personalDialogActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
+      if (conversations.active || personalDialogActive || codex.loginId || googleAccounts.pending || geminiCli.pending) throw new PersonalError('진행 중인 요청을 먼저 중단해 주세요.');
       if (team.active) throw new PersonalError('팀 작업이 진행 중입니다.');
       if (method === 'clear') return team.clear();
       if (method === 'configure') return agents.configureTeam(params);
@@ -245,6 +340,7 @@ else {
         if (personalFailure) throw new Error("개인용 보안 설정을 읽지 못했습니다. 저장 위치와 기존 설정을 확인해 주세요.");
         try {
           if (method === "state") return agents.state();
+          if (conversations.active && !['agent_select', 'slack_state'].includes(method)) throw new PersonalError('다른 세션의 작업이 진행 중입니다. 완료 후 설정을 변경해 주세요.');
           if (googleAccounts.pending || geminiCli.pending) throw new PersonalError('진행 중인 로그인을 완료하거나 취소해 주세요.');
           if (team.active) throw new PersonalError('팀 작업이 진행 중입니다.');
           if (personalDialogActive) throw new PersonalError("열린 확인 창을 먼저 닫아 주세요.");
@@ -333,38 +429,7 @@ else {
             return { status: result.status, usage: result.usage, checkedAt: result.checkedAt };
           }
           if (params?.agentId !== agents.data.selected) throw new PersonalError("대화의 에이전트가 변경되었습니다. 선택 상태를 확인해 주세요.");
-          const agent = agents.state();
-          const generating = method === 'generateImage';
-          const messages = prepareMessages(params?.messages, { ErrorType: PersonalError });
-          const images = messages.flatMap(message => message.images || []);
-          const imageModel = params?.imageModel;
-          if (generating && (typeof imageModel !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(imageModel) || agent.connection === 'codex' || !['openai', 'gemini', 'compatible', 'local'].includes(agent.provider))) throw new PersonalError('image_unsupported');
-          if (generating && (images.length || messages.length !== 1)) throw new PersonalError('image_prompt_only');
-          for (const image of images) validateImage(image);
-          if (generating || images.length) {
-            personal.idle(); personalDialogActive = true;
-            try {
-              const answer = await dialog.showMessageBox(window, { type: 'question', title: t('이미지 요청 확인'), buttons: [t('취소'), t('계속')], defaultId: 0, cancelId: 0,
-                message: t(generating ? '선택한 모델로 이미지를 생성할까요?' : '첨부 이미지를 선택한 모델에 전송할까요?'),
-                detail: `${agent.endpoint}\n${generating ? imageModel : agent.model}\n${t('이미지 수')}: ${images.length}\n${t('공급자 사용량 또는 API 요금이 발생합니다. 이미지 내부의 민감 정보는 자동 검사하지 않습니다.')}` });
-              if (answer.response !== 1) throw new PersonalError('요청을 취소했습니다.');
-            } finally { personalDialogActive = false; }
-          }
-          let execution;
-          personal.idle(); personalDialogActive = true;
-          try {
-            if (generating && params?.access && params.access !== 'chat') throw new PersonalError('지원하지 않는 실행 권한입니다.');
-            execution = await require('./execution-access.cjs').authorizeExecution(params?.access, agent, async info => {
-              const answer = await dialog.showMessageBox(window, { type: 'warning', title: t('전체 접근 승인'),
-                message: t('이 요청에 전체 접근을 허용할까요?'),
-                detail: `${info.agentName}\n${info.model}\n${info.cwd}\n\n${t('작업 폴더 밖을 포함하여 현재 사용자 권한으로 파일 읽기·수정·삭제, 명령 실행 및 네트워크 전송이 가능합니다. 파일과 도구 결과가 모델 공급자에게 전송될 수 있으며 자동 민감 정보 검사를 보장하지 않습니다. 관리자 권한을 부여하지 않습니다. 이 요청에만 적용되며, 중단해도 이미 수행한 변경은 되돌리지 않습니다.')}`,
-                buttons: [t('취소'), t('이번 요청 허용')], defaultId: 0, cancelId: 0 });
-              return answer.response === 1;
-            });
-          } finally { personalDialogActive = false; }
-          const result = await complete(messages, generating ? { imageModel } : { execution });
-          for (const image of result.images || []) validateImage(image, OUTPUT_LIMIT);
-          return { ...result, agentId: agent.agentId, agentName: agent.agentName, model: generating ? imageModel : agent.model };
+          return await executeConversation({ ...params, output: method === 'generateImage' ? 'image' : 'chat' }, agents.state(), personal, complete);
         } catch (error) {
           throw new Error(error instanceof PersonalError ? error.message : "개인용 요청을 처리하지 못했습니다.");
         }
@@ -416,7 +481,7 @@ else {
       enabled: app.isPackaged && process.platform === 'win32',
       assertIdle: () => {
         personal?.idle();
-        if (personalFailure || personal?.data.mode !== 'personal' || setupActive || bridge.pending.size || team?.active || personalDialogActive || codex?.loginId || googleAccounts?.pending || geminiCli?.pending) throw new Error(t('진행 중인 작업이나 로그인을 먼저 완료해 주세요.'));
+        if (conversations.active || personalFailure || personal?.data.mode !== 'personal' || setupActive || bridge.pending.size || team?.active || personalDialogActive || codex?.loginId || googleAccounts?.pending || geminiCli?.pending) throw new Error(t('진행 중인 작업이나 로그인을 먼저 완료해 주세요.'));
       },
       confirmInstall: async () => {
         personalDialogActive = true;
@@ -436,7 +501,8 @@ else {
       return updates[method]();
     });
     window = new BrowserWindow({
-      title: "AEGIS Agent Ops",
+      title: "AZWOL Personal",
+      icon: path.join(__dirname, '../branding/azwol.ico'),
       width: 1360,
       height: 900,
       minWidth: 760,
@@ -453,6 +519,8 @@ else {
       },
     });
     window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    window.webContents.on('did-start-navigation', (_event, _url, inPlace, mainFrame) => { if (mainFrame && !inPlace) conversations.cancelAll(); });
+    window.webContents.on('render-process-gone', () => conversations.cancelAll());
     window.webContents.on("will-navigate", (event) => event.preventDefault());
     window.webContents.on("will-attach-webview", (event) =>
       event.preventDefault(),
@@ -471,6 +539,7 @@ else {
     if (setupActive) { event.preventDefault(); return; }
     clearInterval(setupMonitor);
     updates?.stop();
+    conversations.cancelAll(true);
     personal?.cancel();
     team?.cancel();
     googleAccounts?.stop();

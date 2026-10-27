@@ -1,4 +1,5 @@
 const { EventEmitter } = require('node:events');
+const { updateErrorCode } = require('./update-errors.cjs');
 
 class DesktopUpdates extends EventEmitter {
   constructor({ updater, version, enabled, assertIdle, confirmInstall }) {
@@ -15,7 +16,7 @@ class DesktopUpdates extends EventEmitter {
     updater.on('update-not-available', () => this.set({ status: 'current', version: '' }));
     updater.on('download-progress', info => this.set({ percent: Math.max(0, Math.min(100, Math.round(info.percent) || 0)) }));
     updater.on('update-downloaded', () => this.set({ status: 'ready', percent: 100 }));
-    updater.on('error', () => this.set({ status: 'error' }));
+    updater.on('error', error => this.set({ status: 'error', errorCode: updateErrorCode(error) }));
   }
   state() { return { ...this.value }; }
   set(patch) { Object.assign(this.value, patch); this.emit('change', this.state()); }
@@ -27,17 +28,17 @@ class DesktopUpdates extends EventEmitter {
   stop() { clearTimeout(this.timer); clearInterval(this.interval); }
   async check() {
     if (this.locked || !['idle', 'current', 'error'].includes(this.value.status)) return this.state();
-    this.locked = true; this.set({ status: 'checking' });
+    this.locked = true; this.set({ status: 'checking', errorCode: '' });
     try { await this.updater.checkForUpdates(); }
-    catch { this.set({ status: 'error' }); }
+    catch (error) { this.set({ status: 'error', errorCode: updateErrorCode(error) }); }
     finally { this.locked = false; }
     return this.state();
   }
   async download() {
     if (this.locked || this.value.status !== 'available') return this.state();
-    this.locked = true; this.set({ status: 'downloading', percent: 0 });
+    this.locked = true; this.set({ status: 'downloading', percent: 0, errorCode: '' });
     try { await this.updater.downloadUpdate(); }
-    catch { this.set({ status: 'error' }); }
+    catch (error) { this.set({ status: 'error', errorCode: updateErrorCode(error) }); }
     finally { this.locked = false; }
     return this.state();
   }
@@ -45,10 +46,10 @@ class DesktopUpdates extends EventEmitter {
     if (this.locked || this.value.status !== 'ready') return this.state();
     this.locked = true;
     try {
-      this.assertIdle();
+      await this.assertIdle();
       if (!await this.confirmInstall()) return this.state();
       // Work may have started while the native confirmation was open.
-      this.assertIdle();
+      await this.assertIdle();
       this.updater.quitAndInstall(false, true);
     } finally { this.locked = false; }
     return this.state();

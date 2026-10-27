@@ -30,6 +30,7 @@ import {
 import { api } from "./api";
 import SetupPanel from "./SetupPanel";
 import { EditionRoot } from "./PersonalApp";
+import BrandMark from './BrandMark';
 import { initialSessions, MAX_SESSIONS, sessionReducer } from "./sessions.mjs";
 import "./styles.css";
 import "./workspace.css";
@@ -299,10 +300,10 @@ function App({ onModeChange, modeBusy }) {
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-symbol">
-            <Workflow size={21} strokeWidth={1.7} />
+            <BrandMark />
           </span>
           <div>
-            AEGIS<small>{snapshot?.host || "Agent Ops"}</small>
+            AZWOL<small>{snapshot?.host || "Enterprise"}</small>
           </div>
         </div>
         <button
@@ -430,7 +431,7 @@ function App({ onModeChange, modeBusy }) {
               >
                 {!messages.length && (
                   <div className="empty-chat">
-                    <Workflow size={30} strokeWidth={1.4} className="workspace-logo" />
+                    <BrandMark size={48} className="workspace-logo" />
                     <h2>{t("지금 무엇을 확인할까요?")}</h2>
                   </div>
                 )}

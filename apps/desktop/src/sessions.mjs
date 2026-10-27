@@ -7,7 +7,7 @@ export function conversationInput(messages, text, images = []) {
   const attached = new Set(images);
   let imageCount = images.length;
   let length = JSON.stringify([{ role: 'user', content: text }]).length;
-  const history = messages.filter(row => row.output !== 'image' && ((row.role === 'user' && !['failed', 'pending'].includes(row.state)) || (row.role === 'assistant' && row.state === 'completed'))).slice(-22);
+  const history = messages.filter(row => row.output !== 'image' && row.phase !== 'commentary' && ((row.role === 'user' && !['failed', 'pending'].includes(row.state)) || (row.role === 'assistant' && row.state === 'completed'))).slice(-22);
   // Leave room for role preferences and retrieved memory in the native request limit.
   for (const { role, content, modelContent, images: previous = [] } of history.reverse()) {
     const message = { role, content: modelContent || content };
@@ -55,12 +55,12 @@ export function sessionReducer(state, action) {
       if (!target || !['edit', 'remove'].includes(action.mode) || (action.mode === 'edit' && item.draft)) return item;
       const messages = item.messages.filter(row => row.id !== target.id);
       return { ...item, messages, draft: action.mode === 'edit' ? target.content : item.draft,
-        title: messages.find(row => row.role === 'user')?.content.trim().slice(0, 80) || '새 대화' };
+        title: item.importedFrom ? item.title : messages.find(row => row.role === 'user')?.content.trim().slice(0, 80) || '새 대화' };
     }
     if (action.type === "messages") {
       const messages = typeof action.value === "function" ? action.value(item.messages) : action.value;
       const first = messages.find(message => message.role === "user");
-      return { ...item, messages, title: first?.content.trim().slice(0, 80) || "새 대화" };
+      return { ...item, messages, title: item.importedFrom ? item.title : first?.content.trim().slice(0, 80) || "새 대화" };
     }
     return item;
   }) };

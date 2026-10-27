@@ -3,6 +3,16 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { PersonalError } = require("./personal.cjs");
+const { codexError } = require('./codex-error.cjs');
+
+function conversationWorkspace(value) {
+  try {
+    if (typeof value !== 'string' || !path.isAbsolute(value)) throw new Error();
+    const resolved = fs.realpathSync(value);
+    if (!fs.statSync(resolved).isDirectory()) throw new Error();
+    return resolved;
+  } catch { throw new PersonalError('대화의 작업 폴더가 없습니다. 원본 폴더를 복원하거나 새 대화에서 작업 폴더를 선택해 주세요.'); }
+}
 
 function findCodex() {
   const candidates = (process.env.PATH || "").split(path.delimiter)
@@ -48,9 +58,9 @@ const lockedConfig = {
 };
 
 class CodexConnection {
-  constructor({ directory, openExternal, executable = findCodex(), spawnImpl = spawn, timeoutMs = 30000 }) {
+  constructor({ directory, cwd, openExternal, executable = findCodex(), spawnImpl = spawn, timeoutMs = 30000 }) {
     this.home = path.join(directory, "codex-home");
-    this.cwd = path.join(directory, "codex-workspace");
+    this.cwd = cwd === undefined ? path.join(directory, "codex-workspace") : conversationWorkspace(cwd);
     this.executable = executable;
     this.openExternal = openExternal;
     this.spawn = spawnImpl;
@@ -125,7 +135,7 @@ class CodexConnection {
       const waiting = this.pending.get(message.id);
       if (!waiting) return;
       clearTimeout(waiting.timer); this.pending.delete(message.id);
-      if (message.error) waiting.reject(new PersonalError("Codex 요청이 거부되었습니다. 로그인·계정 권한·사용 한도를 확인해 주세요."));
+      if (message.error) waiting.reject(codexError(message.error, 'Codex 요청이 거부되었습니다. 계정 한도·로그인·모델 상태를 확인해 주세요.'));
       else waiting.resolve(message.result);
       this.idleTimer = setTimeout(() => {
         if (!this.active && !this.loginId && !this.pending.size) this.stop();
@@ -140,13 +150,18 @@ class CodexConnection {
     }
     const active = this.active;
     if (!active || p.threadId !== active.threadId) return;
+    if (message.method === 'error' && p.willRetry !== true) {
+      active.failure = codexError(p.error, 'Codex 응답이 완료되지 않았습니다. 계정 한도와 연결을 확인해 주세요.');
+    }
     if (message.method === "item/completed" && p.item?.type === "agentMessage") {
       active.text += typeof p.item.text === "string" ? p.item.text : "";
       if (active.text.length > 2 * 1024 * 1024) this.stop("Codex 응답 크기를 초과했습니다.");
     }
     if (message.method === "turn/completed") {
       if (p.turn?.status === "completed" && active.text.trim()) active.resolve({ text: active.text, status: "completed", usage: {}, checkedAt: new Date().toISOString() });
-      else active.reject(new PersonalError(p.turn?.status === "interrupted" ? "요청을 취소했습니다." : "Codex 응답이 완료되지 않았습니다. 계정 한도와 연결을 확인해 주세요."));
+      else active.reject(p.turn?.status === 'interrupted' ? new PersonalError('요청을 취소했습니다.') :
+        p.turn?.error?.codexErrorInfo ? codexError(p.turn.error, 'Codex 응답이 완료되지 않았습니다. 계정 한도와 연결을 확인해 주세요.') :
+          active.failure || new PersonalError('Codex 응답이 완료되지 않았습니다. 계정 한도와 연결을 확인해 주세요.'));
     }
   }
   async state() {

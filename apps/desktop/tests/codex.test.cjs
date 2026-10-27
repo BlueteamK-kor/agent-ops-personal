@@ -39,7 +39,7 @@ function fixture(t, custom = {}) {
     return child;
   };
   const opened = [];
-  const service = new CodexConnection({ directory, executable: "fixture-codex", spawnImpl, timeoutMs: custom.timeoutMs || 1000, openExternal: async url => opened.push(url) });
+  const service = new CodexConnection({ directory, executable: "fixture-codex", spawnImpl, ...(custom.cwd === undefined ? {} : { cwd: custom.cwd }), timeoutMs: custom.timeoutMs || 1000, openExternal: async url => opened.push(url) });
   t.after(() => { service.stop(); fs.rmSync(directory, { recursive: true, force: true }); });
   return { service, calls, opened, emit, directory, child: () => child };
 }
@@ -56,6 +56,33 @@ test("Codex startup is lazy, isolates home and strips inherited credentials", as
   assert.equal(lockedConfig.cli_auth_credentials_store, "keyring");
   assert.equal(lockedConfig["features.shell_tool"], false);
   assert.equal(lockedConfig.sandbox_mode, "read-only");
+});
+
+test('an imported conversation cwd keeps its isolated home and read-only tool boundary', async t => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'btk-codex-imported-cwd-'));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  const f = fixture(t, { cwd });
+  await f.service.complete([{ role: 'user', content: 'Continue this imported conversation' }], 'fixture-model');
+  const boot = f.calls.find(call => call.exe);
+  const thread = f.calls.find(call => call.method === 'thread/start');
+  assert.equal(boot.options.cwd, fs.realpathSync(cwd));
+  assert.equal(thread.params.cwd, fs.realpathSync(cwd));
+  assert.equal(thread.params.sandbox, 'read-only');
+  assert.equal(thread.params.approvalPolicy, 'never');
+  assert.equal(boot.options.env.CODEX_HOME, path.join(f.directory, 'codex-home'));
+  assert.ok(boot.args.includes('features.shell_tool=false'));
+  assert.ok(boot.args.includes('features.unified_exec=false'));
+  assert.deepEqual(fs.readdirSync(cwd), []);
+});
+
+test('invalid imported working directories fail before any runtime starts', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'btk-codex-invalid-cwd-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'existing.txt');
+  fs.writeFileSync(file, 'fixture');
+  for (const cwd of ['', 'relative/path', path.join(directory, 'missing'), file, 42]) {
+    assert.throws(() => new CodexConnection({ directory, cwd, spawnImpl: () => assert.fail('runtime must not start') }), /작업 폴더/);
+  }
 });
 
 test('full access is native-approved, uses selected cwd, and never leaks to the next text request', async t => {
@@ -169,6 +196,51 @@ test("failed turns never become completed even when a text item arrived", async 
     emit({ method: "turn/completed", params: { threadId: "fixture-thread", turn: { status: "failed", error: "fixture-not-real" } } }); return true;
   } });
   await assert.rejects(f.service.complete([{ role: "user", content: "hello" }], "fixture-model"), /완료되지/);
+});
+test('structured terminal errors keep their cause instead of a generic failed label', async t => {
+  const f = fixture(t, { handle(message, emit) {
+    if (message.method !== 'turn/start') return false;
+    emit({ id: message.id, result: {} });
+    emit({ method: 'turn/completed', params: { threadId: 'fixture-thread', turn: {
+      status: 'failed', error: { codexErrorInfo: 'usageLimitExceeded', message: 'private-upstream-content' },
+    } } });
+    return true;
+  } });
+  await assert.rejects(f.service.complete([{ role: 'user', content: 'Hello' }], 'fixture-model'), error => {
+    assert.match(error.message, /사용 한도/); assert.equal(error.message.includes('private'), false); return true;
+  });
+});
+
+test('a matching error notification is retained until the failed terminal event', async t => {
+  const f = fixture(t, { handle(message, emit) {
+    if (message.method !== 'turn/start') return false;
+    emit({ id: message.id, result: {} });
+    emit({ method: 'error', params: { threadId: 'fixture-thread', willRetry: false, error: {
+      codexErrorInfo: 'unauthorized', message: 'private-upstream-content',
+    } } });
+    emit({ method: 'turn/completed', params: { threadId: 'fixture-thread', turn: { status: 'failed' } } });
+    return true;
+  } });
+  await assert.rejects(f.service.complete([{ role: 'user', content: 'Hello' }], 'fixture-model'), /인증이 만료/);
+});
+
+test('retryable and unrelated error notifications do not turn a successful response into failure', async t => {
+  const f = fixture(t, { handle(message, emit) {
+    if (message.method !== 'turn/start') return false;
+    emit({ method: 'error', params: { threadId: 'other-thread', error: { codexErrorInfo: 'unauthorized' } } });
+    emit({ method: 'error', params: { threadId: 'fixture-thread', willRetry: true, error: { codexErrorInfo: 'serverOverloaded' } } });
+    return false;
+  } });
+  assert.equal((await f.service.complete([{ role: 'user', content: 'Hello' }], 'fixture-model')).status, 'completed');
+});
+
+test('structured RPC validation errors offer safe settings guidance', async t => {
+  const f = fixture(t, { handle(message, emit) {
+    if (message.method !== 'thread/start') return false;
+    emit({ id: message.id, error: { code: -32602, message: 'private-upstream-content' } });
+    return true;
+  } });
+  await assert.rejects(f.service.complete([{ role: 'user', content: 'Hello' }], 'fixture-model'), /추론 강도 설정/);
 });
 test("Codex chat creates an ephemeral isolated read-only thread", async t => {
   const f = fixture(t); const result = await f.service.complete([{ role: "user", content: "hello" }], "fixture-model");

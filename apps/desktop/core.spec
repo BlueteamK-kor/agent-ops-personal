@@ -13,8 +13,8 @@ if any(name == 'harness' or name.startswith('harness.') for name, *_ in analysis
     raise ValueError('Operational harness modules must not enter the product package')
 pyz = PYZ(analysis.pure)
 core = EXE(pyz, analysis.scripts, [], exclude_binaries=True,
-    name='btk-desktop-core', console=True, debug=False, strip=False, upx=False)
+    name='btk-desktop-core', console=True, debug=False, strip=False, upx=False, icon=str(Path(SPECPATH) / 'branding/azwol.ico'))
 runtime = EXE(pyz, analysis.scripts, [], exclude_binaries=True,
-    name='btk-agent-runtime', console=False, debug=False, strip=False, upx=False)
+    name='btk-agent-runtime', console=False, debug=False, strip=False, upx=False, icon=str(Path(SPECPATH) / 'branding/azwol.ico'))
 collect = COLLECT(core, runtime, analysis.binaries, analysis.datas,
     strip=False, upx=False, name='btk-desktop-core')

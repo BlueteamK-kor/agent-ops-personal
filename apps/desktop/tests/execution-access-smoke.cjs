@@ -15,7 +15,11 @@ let app;
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await app.evaluate(({ app, dialog }, folder) => {
     global.accessConfirm = 0; global.accessDialogs = []; global.accessCalls = [];
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
+    global.accessFolderDialogs = []; global.accessFolderCancel = true;
+    dialog.showOpenDialog = async (_window, options) => {
+      global.accessFolderDialogs.push(options);
+      return { canceled: global.accessFolderCancel, filePaths: global.accessFolderCancel ? [] : [folder] };
+    };
     dialog.showMessageBox = async (_window, options) => { global.accessDialogs.push(options); return { response: global.accessConfirm }; };
     const { CodexConnection } = process.mainModule.require(app.getAppPath() + '/electron/codex.cjs');
     const { consumeExecution } = process.mainModule.require(app.getAppPath() + '/electron/execution-access.cjs');
@@ -23,6 +27,7 @@ let app;
     CodexConnection.prototype.state = async () => ({ connected: true, pending: false, plan: 'fixture' });
     CodexConnection.prototype.complete = async (_messages, model, _effort, grant) => {
       const execution = consumeExecution(grant, model);
+      global.accessLastGrant = grant;
       global.accessCalls.push({ full: Boolean(execution), cwd: execution?.cwd });
       return { status: 'completed', text: 'Fixture complete', checkedAt: new Date().toISOString() };
     };
@@ -40,10 +45,19 @@ let app;
     try { return await p.chat([{ role: 'user', content: 'Fixture request' }], state.agentId, access); }
     catch (error) { return { error: error.message }; }
   }, mode);
-  assert.match((await attempt('full')).error, /작업 폴더/);
-  assert.equal(await app.evaluate(() => global.accessDialogs.length), 0);
-  await page.evaluate(() => window.btk.personal.folder()); await page.reload();
   assert.match((await attempt('full')).error, /취소/);
+  assert.equal(await app.evaluate(() => global.accessFolderDialogs.length), 1);
+  assert.equal(await app.evaluate(() => global.accessDialogs.length), 0);
+  assert.equal(await app.evaluate(() => global.accessCalls.length), 0, 'Declining the folder picker never invokes a model');
+  await app.evaluate(() => { global.accessFolderCancel = false; });
+  assert.match((await attempt('full')).error, /취소/);
+  assert.equal(await app.evaluate(() => global.accessFolderDialogs.length), 2);
+  assert.equal(await page.evaluate(async () => (await window.btk.personal.state()).workspace), fs.realpathSync(folder));
+  assert.deepEqual(await app.evaluate(() => global.accessFolderDialogs.map(options => options.properties)), [['openDirectory'], ['openDirectory']]);
+  assert.equal(await app.evaluate(() => global.accessCalls.length), 0, 'Selecting a folder does not grant execution without separate consent');
+  await page.reload();
+  assert.match((await attempt('full')).error, /취소/);
+  assert.equal(await app.evaluate(() => global.accessFolderDialogs.length), 2, 'A persisted valid folder is reused without a second picker');
   assert.equal(await app.evaluate(() => global.accessCalls.length), 0);
   await app.evaluate(() => { global.accessConfirm = 1; });
   await access.selectOption('full');
@@ -52,6 +66,11 @@ let app;
   await page.getByRole('log').getByText('Fixture complete', { exact: true }).waitFor();
   const calls = await app.evaluate(() => global.accessCalls);
   assert.deepEqual(calls, [{ full: true, cwd: fs.realpathSync(folder) }]);
+  const usedGrantRejected = await app.evaluate(({ app }) => {
+    const { consumeExecution } = process.mainModule.require(app.getAppPath() + '/electron/execution-access.cjs');
+    try { consumeExecution(global.accessLastGrant, 'fixture-codex'); return false; } catch { return true; }
+  });
+  assert.equal(usedGrantRejected, true, 'A native execution grant cannot be reused');
   assert.match((await attempt('admin')).error, /권한/);
   await attempt('chat');
   assert.equal(await app.evaluate(() => global.accessCalls.at(-1).full), false);
@@ -88,7 +107,7 @@ let app;
   await page.reload();
   assert.equal(await page.getByLabel('Execution access', { exact: true }).isDisabled(), true);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ status: 'passed', checks: ['default denied', 'folder required', 'native cancel', 'native approval', 'approval each request', 'no probe inheritance', 'invalid access', 'new conversation reset', 'reload reset', 'unsupported provider', 'English/Korean', 'desktop/mobile'], realProviderCalls: 0 }));
+  console.log(JSON.stringify({ status: 'passed', checks: ['default denied', 'missing folder picker', 'folder picker cancellation', 'folder selection requires separate consent', 'persisted folder reused', 'native cancel', 'native approval', 'single-use execution grant', 'approval each request', 'no probe inheritance', 'invalid access', 'new conversation reset', 'reload reset', 'unsupported provider', 'English/Korean', 'desktop/mobile'], realProviderCalls: 0 }));
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
   await app?.close();
   fs.rmSync(temporary, { recursive: true, force: true, maxRetries: 3 });

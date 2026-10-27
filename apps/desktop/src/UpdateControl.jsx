@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, RefreshCw, RotateCw, X } from 'lucide-react';
 import { useI18n } from './Language';
+import { updateErrorLabel } from './update-error-labels.mjs';
 
 export default function UpdateControl() {
   const { t, errorText } = useI18n();
@@ -31,8 +32,8 @@ export default function UpdateControl() {
     <button className="outline-button" onClick={() => setOpen(true)} title={t(labels[state.status])}><RefreshCw size={16} />{t(['available', 'ready'].includes(state.status) ? '업데이트 가능' : '앱 업데이트')}</button>
     {open && createPortal(<dialog className="update-dialog" ref={node => { if (node && !node.open) node.showModal(); }} onCancel={() => setOpen(false)} aria-label={t('앱 업데이트')}>
       <header><h2>{t('앱 업데이트')}</h2><button autoFocus className="icon-button" onClick={() => setOpen(false)} title={t('닫기')} aria-label={t('닫기')}><X size={18} /></button></header>
-      <p>AEGIS Agent Ops {state.currentVersion}{state.version ? ` → ${state.version}` : ''}</p>
-      <p role="status">{t(labels[state.status])}</p>
+      <p>AZWOL Personal {state.currentVersion}{state.version ? ` → ${state.version}` : ''}</p>
+      <p role="status">{t(state.status === 'error' ? updateErrorLabel(state.errorCode) : labels[state.status])}</p>
       {state.status === 'downloading' && <progress max="100" value={state.percent} aria-label={t('업데이트 다운로드 중')} />}
       {error && <p role="alert">{error}</p>}
       <button className="outline-button" disabled={busy || ['checking', 'downloading', 'unavailable'].includes(state.status)} onClick={run}>{action === 'download' ? <Download size={16} /> : <RotateCw size={16} />}{t(label)}</button>

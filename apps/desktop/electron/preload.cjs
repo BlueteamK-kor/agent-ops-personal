@@ -18,6 +18,20 @@ contextBridge.exposeInMainWorld("btk", {
     save: language => ipcRenderer.invoke('btk:preferences:save', { language }),
   },
   personal: {
+    sessions: {
+      submit: params => ipcRenderer.invoke('btk:sessions:submit', params),
+      cancel: params => ipcRenderer.invoke('btk:sessions:cancel', params),
+      state: () => ipcRenderer.invoke('btk:sessions:state'),
+      onChange: callback => {
+        const listener = (_event, value) => callback(value);
+        ipcRenderer.on('btk:sessions:changed', listener);
+        return () => ipcRenderer.removeListener('btk:sessions:changed', listener);
+      },
+    },
+    history: {
+      import: agentId => ipcRenderer.invoke('btk:history:import', { agentId }),
+      folder: (agentId, sessionId) => ipcRenderer.invoke('btk:history:folder', { agentId, sessionId }),
+    },
     fileTask: {
       generate: (agentId, path, objective) => ipcRenderer.invoke('btk:file-task:generate', { agentId, path, objective }),
       apply: (agentId, id) => ipcRenderer.invoke('btk:file-task:apply', { agentId, id }),

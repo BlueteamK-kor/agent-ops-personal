@@ -7,7 +7,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,10 +42,17 @@ jobs:
         working-directory: apps/desktop
       - run: npm run test:execution-access
         working-directory: apps/desktop
+      - name: Verify Personal session and history fixtures
+        working-directory: apps/desktop
+        run: |
+          node tests/conversations-ui-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/codex-history-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - run: npm audit --audit-level=high
         working-directory: apps/desktop
-      - name: Build isolated Windows package
-        run: powershell -NoProfile -File apps/desktop/build-windows.ps1 -Unpacked
+      - name: Build isolated Windows installer and package
+        run: powershell -NoProfile -File apps/desktop/build-windows.ps1
       - name: Verify packaged core without development runtimes
         working-directory: apps/desktop
         env:
@@ -74,6 +81,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/updates-ui-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/azwol-native-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/transmission-ui-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/workspace-tools-smoke.cjs
@@ -83,6 +92,10 @@ jobs:
           node tests/file-task-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/execution-access-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/conversations-ui-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/codex-history-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/workspace-archive-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -96,3 +109,37 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:BTK_DESKTOP_PREVIOUS_EXE = $env:BTK_DESKTOP_TEST_EXE
           node tests/upgrade-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify installed public 0.5.20 to candidate upgrade with preserved encrypted settings
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $baseline = Join-Path $env:RUNNER_TEMP 'azwol-public-baseline'
+          gh release download v0.5.20 --repo aegisintelmetry/agent-ops-personal --dir $baseline --pattern AEGIS-Agent-Ops-Setup-0.5.20.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $installer = Join-Path $baseline 'AEGIS-Agent-Ops-Setup-0.5.20.exe'
+          if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'da9dd14f44d02dbf9d5f47070f0b6724cd3c4ad1db1f67d3fdfa7858800c4c35') { throw 'Public baseline digest changed' }
+          $target = Join-Path $env:RUNNER_TEMP 'azwol-installed-upgrade'
+          $process = Start-Process -FilePath $installer -ArgumentList @('/S',('/D='+$target)) -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Baseline installation failed' }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $env:BTK_DESKTOP_INSTALL_TEST_ROOT = $target
+          $env:BTK_DESKTOP_PREVIOUS_EXE = Join-Path $target 'AEGIS Agent Ops.exe'
+          $env:BTK_DESKTOP_TEST_EXE = $env:BTK_DESKTOP_PREVIOUS_EXE
+          $env:BTK_DESKTOP_UPGRADE_INSTALLER = Join-Path (Get-Location) "release/AEGIS-Agent-Ops-Setup-$version.exe"
+          node tests/upgrade-smoke.cjs --install-upgrade
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: personal-windows-${{ github.run_id }}
+          retention-days: 7
+          path: |
+            apps/desktop/release/*Setup*.exe
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest.yml
+            apps/desktop/release/SHA256SUMS.txt
+            apps/desktop/stage/desktop-release.json
+            apps/desktop/artifacts/**

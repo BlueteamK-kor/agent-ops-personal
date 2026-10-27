@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export function useWorkspaceStore(groups, dispatch) {
   const api = window.btk?.personal?.workspace;
@@ -6,13 +6,17 @@ export function useWorkspaceStore(groups, dispatch) {
   const latest = useRef(groups);
   const writable = useRef(false);
   const persisted = useRef(null);
-  latest.current = groups;
+  useLayoutEffect(() => { latest.current = groups; }, [groups]);
   useEffect(() => {
     if (!api) return;
     let alive = true;
     api.read().then(value => {
       if (!alive) return;
-      dispatch({ action: { type: 'hydrate', groups: value } });
+      // An immediate reload must flush restored data, not the pre-hydration empty UI.
+      const restored = { ...latest.current, ...value };
+      latest.current = restored;
+      persisted.current = restored;
+      dispatch({ action: { type: 'hydrate', groups: restored } });
       writable.current = true;
       setStatus('ready');
     }).catch(() => { if (alive) setStatus('restoreError'); });

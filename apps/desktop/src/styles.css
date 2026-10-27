@@ -105,11 +105,15 @@ small {
 .brand-symbol {
   width: 36px;
   height: 39px;
-  background: #1b3532;
+  background: transparent;
   color: #f9fbfa;
   border-radius: 8px;
   display: grid;
   place-items: center;
+}
+.azwol-mark {
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .brand small {
   display: block;

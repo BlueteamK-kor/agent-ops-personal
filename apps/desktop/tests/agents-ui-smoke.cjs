@@ -70,11 +70,31 @@ async function chat(page, text, model) {
   await page.getByLabel("개인 메시지", { exact: true }).fill("wait");
   await page.getByRole("button", { name: "개인 메시지 전송", exact: true }).click();
   await page.getByRole("button", { name: "개인 답변 중단", exact: true }).waitFor();
-  assert.equal(await page.getByLabel("에이전트", { exact: true }).isDisabled(), true);
-  const blocked = await page.evaluate(async id => { try { await window.btk.personal.agents.select(id); return false; } catch { return true; } }, beta.agentId);
-  assert.equal(blocked, true);
-  await page.getByRole("button", { name: "개인 답변 중단", exact: true }).click();
-  await page.getByRole("alert").filter({ hasText: "취소" }).waitFor();
+  assert.equal(await page.getByLabel("에이전트", { exact: true }).isEnabled(), true);
+  const nativeSelection = await page.evaluate(id => window.btk.personal.agents.select(id), beta.agentId);
+  assert.equal(nativeSelection.agentId, beta.agentId);
+  const mutationsBlocked = await page.evaluate(async () => {
+    const p = window.btk.personal, result = [];
+    for (const action of [() => p.connection('codex'), () => p.agents.create('must not be created')]) {
+      try { await action(); result.push(false); } catch { result.push(true); }
+    }
+    return result;
+  });
+  assert.deepEqual(mutationsBlocked, [true, true], 'Navigation must not enable model or agent configuration changes');
+  await page.getByLabel("에이전트", { exact: true }).selectOption(beta.agentId);
+  await page.getByText("reply beta-model", { exact: true }).waitFor();
+  assert.equal(await page.getByText("reply alpha-model", { exact: true }).count(), 0);
+  const targetedCancellation = await page.evaluate(async () => {
+    const p = window.btk.personal;
+    const job = (await p.sessions.state()).find(item => item.agentId === 'default');
+    if (!job) return { cancelled: false };
+    return p.sessions.cancel({ agentId: job.agentId, sessionId: job.sessionId, requestId: job.requestId });
+  });
+  assert.equal(targetedCancellation.cancelled, true);
+  await page.waitForFunction(async () => (await window.btk.personal.sessions.state()).length === 0);
+  assert.deepEqual(await page.getByRole("alert").allTextContents(), [], 'Cancelling the old agent must not add an error to the selected agent');
+  await page.getByLabel("에이전트", { exact: true }).selectOption('default');
+  await page.locator('.personal-message-error').filter({ hasText: '취소' }).waitFor();
   await page.getByLabel("에이전트", { exact: true }).selectOption(beta.agentId);
   await page.getByText("reply beta-model", { exact: true }).waitFor();
   fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
@@ -94,7 +114,7 @@ async function chat(page, text, model) {
   assert.equal(restored.agentName, "조사 에이전트");
   assert.equal(requests.length, count);
   assert.equal(errors.length, 0);
-  const result = { status: "passed", packaged: Boolean(process.env.BTK_DESKTOP_TEST_EXE), checks: ["per_agent_model_routing", "no_credential_copy", "native_encryption", "per_agent_conversation_isolation", "history_restored_on_switch", "stale_agent_request_rejected", "busy_switch_rejected_ui_and_ipc", "cancel", "restart_restores_selected_agent", "no_automatic_network_on_save_or_restart", "layout_390_780_1440", "no_renderer_errors"], actualProviderRequests: false, checkedAt: new Date().toISOString() };
+  const result = { status: "passed", packaged: Boolean(process.env.BTK_DESKTOP_TEST_EXE), checks: ["per_agent_model_routing", "no_credential_copy", "native_encryption", "per_agent_conversation_isolation", "history_restored_on_switch", "stale_agent_request_rejected", "busy_agent_navigation_allowed_ui_and_ipc", "configuration_mutations_blocked_while_busy", "targeted_old_agent_cancellation", "restart_restores_selected_agent", "no_automatic_network_on_save_or_restart", "layout_390_780_1440", "no_renderer_errors"], actualProviderRequests: false, checkedAt: new Date().toISOString() };
   fs.writeFileSync(path.join(root, process.env.BTK_DESKTOP_TEST_EXE ? "artifacts/agents-packaged-smoke.json" : "artifacts/agents-ui-smoke.json"), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
 })().catch(error => { console.error(error.stack); process.exitCode = 1; }).finally(async () => { await instance?.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });

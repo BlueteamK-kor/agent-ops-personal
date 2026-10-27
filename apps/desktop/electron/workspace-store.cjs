@@ -29,15 +29,32 @@ function validateGroups(groups, recover = false) {
         }
         return result;
       });
-      const messages = list(item.messages, 500).map(row => {
+      let importedFrom;
+      if (item.importedFrom !== undefined) {
+        const source = item.importedFrom;
+        const uuid = value => { if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(string(value,36))) fail(); return value; };
+        if (!source || source.source !== 'vscode') fail();
+        importedFrom = { source: 'vscode', threadId: uuid(source.threadId), archiveId: uuid(source.archiveId),
+          cwd: string(source.cwd, 4096), model: string(source.model,200), importedAt: string(source.importedAt,40), lastActivityAt: string(source.lastActivityAt,40) };
+        for (const field of ['sourceItems','messages','attachments']) {
+          if (!Number.isSafeInteger(source[field]) || source[field] < 0 || source[field] > 1000000) fail();
+          importedFrom[field] = source[field];
+        }
+      }
+      const messages = list(item.messages, importedFrom ? 10000 : 500).map(row => {
         if (!['user', 'assistant'].includes(row.role) || !['pending', 'completed', 'partial', 'failed'].includes(row.state)) fail();
         return { id: id(row.id), role: row.role, content: string(row.content, 100000), state: recover && row.state === 'pending' ? 'failed' : row.state,
           ...(row.modelContent !== undefined ? { modelContent: string(row.modelContent, 100000) } : {}),
           ...(row.images !== undefined ? { images: imageList(row.images, { output: row.role === 'assistant' }) } : {}),
-          ...(row.model ? { model: string(row.model, 200) } : {}), output: output(row.output), usage: usage(row.usage) };
+          ...(row.model ? { model: string(row.model, 200) } : {}),
+          ...(row.role === 'assistant' && row.phase === 'commentary' ? { phase: 'commentary' } : {}),
+          ...(row.state === 'failed' && row.error !== undefined ? { error: string(row.error, 1000) } : {}),
+          ...(recover && row.state === 'pending' ? { error: '앱이 종료되어 요청 결과를 확인하지 못했습니다. 이미 수행된 작업을 확인한 뒤 다시 시도해 주세요.' } : {}),
+          output: output(row.output), usage: usage(row.usage) };
       });
       if (new Set(messages.map(row => row.id)).size !== messages.length) fail();
       const result = { id: id(item.id), title: string(item.title, 80), draft: string(item.draft, 16000), output: output(item.output), sources, messages };
+      if (importedFrom) result.importedFrom = importedFrom;
       if (item.imageModel !== undefined) result.imageModel = string(item.imageModel, 200);
       if (item.latestRun) {
         const run = item.latestRun;
