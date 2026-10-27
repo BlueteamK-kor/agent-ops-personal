@@ -19,6 +19,9 @@ test('Personal installer refuses integrated releases and active runtimes without
   fs.writeFileSync(path.join(resources, 'desktop-release.json'), JSON.stringify({ schema: 'btk.desktop.release.v1' }));
   assert.equal(check(false), 0);
   assert.equal(check(true), 2);
+  fs.mkdirSync(path.join(resources, 'core'));
+  fs.writeFileSync(path.join(resources, 'core/harness-runtime.zip'), 'fixture');
+  assert.equal(check(false), 2);
   const source = fs.readFileSync(script, 'utf8');
   assert(!/Stop-Process|taskkill|Terminate|Remove-Item/.test(source));
 });

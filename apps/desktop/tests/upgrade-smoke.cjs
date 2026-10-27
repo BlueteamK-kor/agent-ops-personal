@@ -3,12 +3,16 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
+const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { _electron } = require('playwright');
 const root = path.resolve(__dirname, '..');
 const previous = process.env.BTK_DESKTOP_PREVIOUS_EXE;
 const candidate = process.env.BTK_DESKTOP_TEST_EXE;
 const installUpgrade = process.argv.includes('--install-upgrade');
+const downloadUpgrade = process.argv.includes('--download-upgrade');
+const updateRequests = [];
+let downloadedInstaller;
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-upgrade-'));
 const requests = [];
 const errors = [];
@@ -45,6 +49,24 @@ function savedFiles() {
 (async () => {
   assert.ok(previous && candidate, 'Set previous and candidate package executable paths');
   server = http.createServer(async (req, res) => {
+    if (downloadUpgrade && req.url.startsWith('/updates/')) {
+      const installer = process.env.BTK_DESKTOP_UPGRADE_INSTALLER;
+      const raw = fs.readFileSync(installer);
+      const name = path.basename(installer);
+      const url = new URL(req.url, 'http://127.0.0.1');
+      updateRequests.push(url.pathname);
+      if (url.pathname === '/updates/latest.yml') {
+        const sha512 = createHash('sha512').update(raw).digest('base64');
+        const body = JSON.stringify({ version: require('../package.json').version,
+          files: [{ url: name, sha512, size: raw.length }], path: name, sha512 });
+        res.writeHead(200, { 'Content-Type': 'application/yaml' }); res.end(body); return;
+      }
+      if (url.pathname === '/updates/' + name) {
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': raw.length });
+        fs.createReadStream(installer).pipe(res); return;
+      }
+      res.writeHead(404); res.end(); return;
+    }
     let raw = ''; for await (const chunk of req) raw += chunk;
     requests.push({ body: JSON.parse(raw), correctKey: req.headers.authorization === 'Bearer fixture-upgrade-key' });
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -67,6 +89,22 @@ function savedFiles() {
     return { state: await p.state(), team: await p.team.configuration(), knowledge: await p.knowledge.read('default'), preferences: await window.btk.preferences.read() };
   }, `http://127.0.0.1:${server.address().port}/v1`);
   assert.equal(requests.length, 0);
+  if (downloadUpgrade) {
+    assert(installUpgrade, 'Real updater transfer requires the installed upgrade fixture');
+    await app.evaluate(({ app }, feed) => {
+      const updater = process.mainModule.require(app.getAppPath() + '/node_modules/electron-updater').autoUpdater;
+      updater.disableDifferentialDownload = true;
+      updater.setFeedURL({ provider: 'generic', url: feed });
+      updater.once('update-downloaded', info => { global.downloadedInstaller = info.downloadedFile; });
+    }, `http://127.0.0.1:${server.address().port}/updates/`);
+    assert.equal((await page.evaluate(() => window.btk.updates.check())).status, 'available');
+    assert.equal((await page.evaluate(() => window.btk.updates.download())).status, 'ready');
+    downloadedInstaller = await app.evaluate(() => global.downloadedInstaller);
+    assert.equal(createHash('sha256').update(fs.readFileSync(downloadedInstaller)).digest('hex'),
+      createHash('sha256').update(fs.readFileSync(process.env.BTK_DESKTOP_UPGRADE_INSTALLER)).digest('hex'));
+    assert(updateRequests.includes('/updates/latest.yml'));
+    assert(updateRequests.some(value => value.endsWith('.exe')));
+  }
   await app.close(); app = null;
   const files = savedFiles();
   for (const data of files.values()) assert.ok(!data.includes(Buffer.from('fixture-upgrade-key')));
@@ -81,7 +119,9 @@ function savedFiles() {
       `$ErrorActionPreference="Stop"
 $p=Start-Process -FilePath $env:BTK_DESKTOP_UPGRADE_INSTALLER -ArgumentList @("/S",("/D="+$env:BTK_DESKTOP_INSTALL_TEST_ROOT)) -WindowStyle Hidden -Wait -PassThru
 exit $p.ExitCode`,
-    ], { windowsHide: true, timeout: 180000, stdio: 'pipe', env: { ...process.env, BTK_DESKTOP_INSTALL_TEST_ROOT: target } });
+    ], { windowsHide: true, timeout: 180000, stdio: 'pipe', env: { ...process.env,
+      BTK_DESKTOP_UPGRADE_INSTALLER: downloadedInstaller || process.env.BTK_DESKTOP_UPGRADE_INSTALLER,
+      BTK_DESKTOP_INSTALL_TEST_ROOT: target } });
   }
   page = await launch(candidate);
   const to = await app.evaluate(({ app }) => app.getVersion());
@@ -109,6 +149,7 @@ exit $p.ExitCode`,
   assert.equal(requests.length, 1);
   assert.deepEqual(errors, []);
   const report = { status: 'passed', from, to, installerExecuted: installUpgrade, noDevelopmentRuntimeOnPath: true,
+    actualUpdaterDownload: downloadUpgrade, downloadedInstallerHashVerified: Boolean(downloadedInstaller),
     preserved: ['agents', 'models', 'encrypted-key', 'team', 'role', 'memory', 'language'], startupRequests: 0,
     fixtureRequests: 1, realProviderRequests: 0, conversationsPersisted: true };
   fs.mkdirSync(path.join(root, 'artifacts'), { recursive: true });

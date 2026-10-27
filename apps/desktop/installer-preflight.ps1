@@ -18,6 +18,7 @@ function Assert-PersonalDirectory([string]$Directory) {
         $current = $parent
     }
     $manifest = Join-Path $full 'resources\desktop-release.json'
+    if ((Test-Path -LiteralPath (Join-Path $full 'AEGIS Agent Ops.exe')) -and -not (Test-Path -LiteralPath $manifest)) { throw 'unknown existing installation' }
     if (Test-Path -LiteralPath $manifest) {
         $file = Get-Item -LiteralPath $manifest -Force
         if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $file.Length -gt 4194304) { throw 'invalid release' }
@@ -25,6 +26,9 @@ function Assert-PersonalDirectory([string]$Directory) {
         if ($release.schema -cne 'btk.desktop.release.v1' -or $release.harness_runtime -or $release.development_updates) { throw 'different installation family' }
     }
     if (Test-Path -LiteralPath (Join-Path $full 'resources\harness-runtime')) { throw 'enterprise runtime present' }
+    foreach ($name in @('harness-runtime.zip','harness-runtime.json')) {
+        if (Test-Path -LiteralPath (Join-Path $full ('resources\core\'+$name))) { throw 'integrated runtime present' }
+    }
 }
 
 try {
@@ -37,7 +41,10 @@ try {
     # destination was selected. Never replace an integrated organization build.
     foreach ($key in @(Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction Stop)) {
         $entry = Get-ItemProperty -LiteralPath $key.PSPath
-        if ($entry.DisplayName -eq 'AEGIS Agent Ops' -and $entry.InstallLocation) { Assert-PersonalDirectory $entry.InstallLocation }
+        if ($entry.DisplayName -eq 'AEGIS Agent Ops') {
+            if (-not $entry.InstallLocation) { throw 'unknown registered installation' }
+            Assert-PersonalDirectory $entry.InstallLocation
+        }
     }
     $names = @('AEGIS Agent Ops.exe','btk-desktop-core.exe','btk-agent-runtime.exe','btk-agent-updater.exe')
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
