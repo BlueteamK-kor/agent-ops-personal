@@ -5,7 +5,7 @@ const path = require('node:path');
 const { Data } = require('resedit');
 const root = path.resolve(__dirname, '..');
 
-test('AZWOL icon frames and physical update identities are preserved', () => {
+test('AZOWL icon frames and physical update identities are preserved', () => {
   const icon = Data.IconFile.from(fs.readFileSync(path.join(root, 'branding/azwol.ico')));
   assert.deepEqual(icon.icons.map(frame => frame.width || 256), [16,20,24,32,40,48,64,128,256]);
   const config = JSON.parse(fs.readFileSync(path.join(root, 'electron-builder.json')));

@@ -303,7 +303,7 @@ function App({ onModeChange, modeBusy }) {
             <BrandMark />
           </span>
           <div>
-            AZWOL<small>{snapshot?.host || "Enterprise"}</small>
+            AZOWL<small>{snapshot?.host || "Enterprise"}</small>
           </div>
         </div>
         <button

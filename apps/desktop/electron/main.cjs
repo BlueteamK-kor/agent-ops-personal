@@ -501,7 +501,7 @@ else {
       return updates[method]();
     });
     window = new BrowserWindow({
-      title: "AZWOL Personal",
+      title: "AZOWL Personal",
       icon: path.join(__dirname, '../branding/azwol.ico'),
       width: 1360,
       height: 900,

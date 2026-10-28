@@ -1,4 +1,6 @@
-# AZWOL Personal
+# AZOWL Personal
+
+0.5.93에서 앱 이름을 AZOWL로 교정합니다. 이전 버전에는 AZWOL이 표시될 수 있습니다. 설치 식별자와 업데이트 경로는 유지합니다.
 
 [![Windows checks](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](LICENSE)
@@ -7,17 +9,17 @@
 
 [English](README.md) | [Windows 다운로드](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest) | [보안 신고](SECURITY.md)
 
-여러 언어 모델과 대화하고, 텍스트 작업을 에이전트 팀으로 나누고, 필요한 기억을 직접 관리하는 **AEGIS의 오픈소스 데스크톱 프로젝트**입니다.
+여러 언어 모델과 대화하고, 텍스트 작업을 에이전트 팀으로 나누고, 필요한 기억을 직접 관리하는 **블루팀케이의 오픈소스 데스크톱 프로젝트**입니다.
 
-**AEGIS의 중심은 Security FDE입니다.** Personal은 우리가 공개적으로 개발하는 프로젝트이며, 기업용 보안 제품이나 Security FDE 서비스의 대체재가 아닙니다. 개인 사용과 피드백을 환영합니다. 기업 연동은 실제 사용자에게서 적용 수요가 확인될 때 검토하며, Personal 사용에 기업 계약이나 조직 계정은 필요하지 않습니다.
+**블루팀케이의 중심은 Security FDE입니다.** Personal은 우리가 공개적으로 개발하는 프로젝트이며, 기업용 보안 제품이나 Security FDE 서비스의 대체재가 아닙니다. 개인 사용과 피드백을 환영합니다. 기업 연동은 실제 사용자에게서 적용 수요가 확인될 때 검토하며, Personal 사용에 기업 계약이나 조직 계정은 필요하지 않습니다.
 
 ![팀 대화와 마스터·작업자 트리](docs/assets/team-workspace.png)
 
 *자동 UI 시험에서 촬영한 실제 앱 화면입니다. 이름·모델 ID·응답은 합성 테스트 데이터이며, 실제 공급자 응답이나 성능 측정 결과가 아닙니다.*
 
-앱 이름과 아이콘을 AZWOL로 변경합니다. 기존 설치 식별자와 로컬 데이터 위치는
+앱 이름과 아이콘을 AZOWL로 변경합니다. 기존 설치 식별자와 로컬 데이터 위치는
 유지합니다. 개인용 공개 업데이트와 기업용 설치본의 구분은
-[0.5.92 업데이트 안내](docs/release-0.5.92.md)를 참고하세요.
+[0.5.93 업데이트 안내](docs/release-0.5.93.md)를 참고하세요.
 
 ## 목차
 

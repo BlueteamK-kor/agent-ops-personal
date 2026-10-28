@@ -28,7 +28,7 @@ const output = path.join(root, 'artifacts/azwol');
     const mark = page.locator('.brand .azwol-mark');
     await mark.waitFor();
     assert(await mark.evaluate(image => image.complete && image.naturalWidth > 0));
-    assert((await page.title()).startsWith('AZWOL'));
+    assert((await page.title()).startsWith('AZOWL'));
     await app.evaluate(({ app }) => {
       const updater = process.mainModule.require(app.getAppPath() + '/node_modules/electron-updater').autoUpdater;
       updater.emit('error', Object.assign(new Error('https://private.invalid/?token=fixture-only-secret'), { code: 'ENOTFOUND' }));

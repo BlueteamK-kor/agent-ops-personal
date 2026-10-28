@@ -10,7 +10,7 @@
   Pop $0
   Pop $1
   ${If} $0 != 0
-    MessageBox MB_OK|MB_ICONSTOP "Close AZWOL / AEGIS Agent Ops before continuing. An Enterprise installation must use the organization installer. Choose a shorter directory if the installation path is too long. No processes were terminated." /SD IDOK
+    MessageBox MB_OK|MB_ICONSTOP "Close AZOWL / AEGIS Agent Ops before continuing. An Enterprise installation must use the organization installer. Choose a shorter directory if the installation path is too long. No processes were terminated." /SD IDOK
     SetErrorLevel 2
     Abort
   ${EndIf}

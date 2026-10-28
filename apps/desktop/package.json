@@ -1,6 +1,6 @@
 {
   "name": "btk-agent-desktop",
-  "version": "0.5.92",
+  "version": "0.5.93",
   "description": "AEGIS Agent Ops desktop and isolated local core",
   "license": "Apache-2.0",
   "author": {

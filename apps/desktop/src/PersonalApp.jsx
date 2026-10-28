@@ -50,7 +50,7 @@ export function EditionRoot({ Enterprise }) {
   if (state?.mode === "enterprise") return <><Enterprise onModeChange={() => select("personal")} modeBusy={busy} />{error && <p className="mode-error" role="alert">{errorText(error)}</p>}</>;
   return <main className="edition-choice">
     <LanguageSelect />
-    <BrandMark size={48} className="workspace-logo" /><h1>AZWOL</h1>
+    <BrandMark size={48} className="workspace-logo" /><h1>AZOWL</h1>
     <div className="edition-options" role="group" aria-label={t("실행 모드")}>
       <button disabled={busy || !state} onClick={() => select("personal")}><MonitorMark /><strong>{t("개인용")}</strong><span>Personal</span></button>
       <button disabled={busy || !state} onClick={() => select("enterprise")}><Shield size={25} /><strong>{t("조직 연결")}</strong><span>Enterprise</span></button>
@@ -291,7 +291,7 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
   return <div className={`app workspace-app personal-app ${navOpen ? "nav-open" : "nav-closed"}`}>
     {navOpen && <button className="personal-nav-scrim" aria-label={t("탐색 닫기")} onClick={() => setNavOpen(false)} />}
     <aside className="sidebar">
-      <div className="brand"><span className="brand-symbol"><BrandMark /></span><div>AZWOL<small>Personal</small></div></div>
+      <div className="brand"><span className="brand-symbol"><BrandMark /></span><div>AZOWL<small>Personal</small></div></div>
       <button className="new-chat" disabled={navigationLocked || sessions.items.length >= MAX_SESSIONS} onClick={() => { dispatch({ type: "create", id: crypto.randomUUID() }); navigate("chat"); }}><Plus size={17} />{t("새 대화")}</button>
       <nav aria-label={t("개인용 탐색")}>
         <button className={view === 'team' ? 'active' : ''} disabled={busy || chatBusy} onClick={() => navigate('team')}><Workflow size={18} />{t('팀 작업')}</button>
@@ -327,7 +327,7 @@ function PersonalApp({ initial, onModeChange, modeBusy, modeError }) {
             <div className="history-pages"><ButtonIcon label={t('이전 메시지')} disabled={navigationLocked || pageStart === 0} onClick={() => setHistoryPage(value => value + 1)}><ChevronLeft size={16} /></ButtonIcon><small>{pageStart + 1}-{pageEnd} / {selected.messages.length}</small><ButtonIcon label={t('최근 메시지')} disabled={navigationLocked || historyPage === 0} onClick={() => setHistoryPage(value => Math.max(0, value - 1))}><ChevronRight size={16} /></ButtonIcon></div>
           </div>}
           <div className="personal-transcript" role="log" aria-label={t("개인 대화")}>
-            {!selected.messages.length && <div className="personal-empty"><BrandMark size={48} className="workspace-logo" /><h1>AZWOL</h1><span>{state.model || t("모델 미연결")}</span></div>}
+            {!selected.messages.length && <div className="personal-empty"><BrandMark size={48} className="workspace-logo" /><h1>AZOWL</h1><span>{state.model || t("모델 미연결")}</span></div>}
             {visibleMessages.map(row => <article className={`personal-message ${row.role}`} key={row.id}><strong>{row.role === "user" ? t("나") : row.model || t("에이전트")}</strong>{row.role === 'assistant' ? <MessageContent content={row.content} /> : <p>{row.content}</p>}<MessageImages row={row} />{row.state === 'failed' && <><div className="personal-message-actions"><span>{t('요청 실패 · 후속 전송에서 제외됨')}</span><ButtonIcon label={t('실패한 메시지 수정')} disabled={locked || Boolean(selected.draft)} onClick={() => { dispatch({ type: 'recover', id: selected.id, messageId: row.id, mode: 'edit' }); setError(''); }}><Pencil size={15} /></ButtonIcon><ButtonIcon label={t('실패한 메시지 삭제')} disabled={locked} onClick={() => { dispatch({ type: 'recover', id: selected.id, messageId: row.id, mode: 'remove' }); setError(''); }}><Trash2 size={15} /></ButtonIcon></div><p className="personal-message-error">{row.error ? errorText(row.error) : t('실패 원인이 기록되지 않았습니다.')}</p></>}{row.state === "partial" && <small>{t("응답 불완전")}</small>}{row.usage && <small>{t("토큰")} {row.usage.total_tokens ?? t("미제공")}</small>}</article>)}
             {chatBusy && <div className="personal-pending" role="status"><LoaderCircle size={16} className={selectedRequest.status === 'queued' ? '' : 'spin'} />{requestLabels[selectedRequest.status]}</div>}
           </div>

@@ -1,6 +1,6 @@
 # Desktop Updates
 
-AZWOL Personal 0.5.92 uses electron-updater with the public
+AZOWL Personal 0.5.93 uses electron-updater with the public
 `BlueteamK-kor/agent-ops-personal` GitHub Releases feed. Earlier installers still
 point to the previous repository and require the new installer once to change
 feeds. No update is published to the previous repository.

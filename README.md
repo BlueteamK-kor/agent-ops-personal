@@ -1,4 +1,6 @@
-# AZWOL Personal
+# AZOWL Personal
+
+Version 0.5.93 corrects the app name to AZOWL. Earlier releases may display AZWOL. Installation identifiers and update channels are unchanged.
 
 [![Windows checks](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml/badge.svg)](https://github.com/BlueteamK-kor/agent-ops-personal/actions/workflows/desktop-checks.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](LICENSE)
@@ -7,7 +9,7 @@
 
 [한국어](README.ko.md) | [Windows download](https://github.com/BlueteamK-kor/agent-ops-personal/releases/latest) | [Security](SECURITY.md)
 
-An open-source desktop project by **AEGIS** for working with multiple language models, coordinating text-based agent teams, and keeping explicit local memory.
+An open-source desktop project by **BlueTeamK** for working with multiple language models, coordinating text-based agent teams, and keeping explicit local memory.
 
 **Security FDE is our primary focus.** Personal is a project we build in the open, not an enterprise security product or a replacement for our Security FDE work. We welcome individual use and feedback. Future enterprise integration will follow real user needs; it is not required to use Personal.
 
@@ -15,8 +17,8 @@ An open-source desktop project by **AEGIS** for working with multiple language m
 
 *Actual desktop UI captured by an automated test. Names, model IDs, and responses are synthetic fixtures, not live provider results or a performance benchmark.*
 
-AZWOL is the new app identity. Existing installation identifiers and local data
-locations remain unchanged. See [0.5.92 update notes](docs/release-0.5.92.md)
+AZOWL is the new app identity. Existing installation identifiers and local data
+locations remain unchanged. See [0.5.93 update notes](docs/release-0.5.93.md)
 for the public Personal and organization installer boundaries.
 
 ## Contents

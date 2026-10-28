@@ -15,7 +15,7 @@ module.exports = async function clearUnconfiguredPublisher(context) {
   // Electron's vendor is not the publisher of this unsigned product.
   for (const version of Resource.VersionInfo.fromEntries(resources.entries)) {
     for (const language of version.getAllLanguagesForStringValues()) {
-      version.setStringValues(language, { CompanyName: require('./package.json').author?.name || '', ProductName: 'AZWOL Personal', FileDescription: 'AZWOL Personal' });
+      version.setStringValues(language, { CompanyName: require('./package.json').author?.name || '', ProductName: 'AZOWL Personal', FileDescription: 'AZOWL Personal' });
     }
     version.outputToResourceEntries(resources.entries);
   }
